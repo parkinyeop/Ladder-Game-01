@@ -72,7 +72,10 @@ public class PlayerMover
             yield break;
         }
 
-        float currentY = LadderLayoutHelper.GetStartY(stepCount, stepHeight);
+        // 정확한 초기 위치를 step 0 기준으로 계산
+        float currentY = LadderLayoutHelper.GetYPosition(0, stepCount, stepHeight);
+
+        // 정확한 초기 위치로 플레이어 설정
         rectTransform.anchoredPosition = new Vector2(
             LadderLayoutHelper.GetXPosition(currentX, ladderWidth, ladderManager.verticalCount),
             currentY

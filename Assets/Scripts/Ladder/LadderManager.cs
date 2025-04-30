@@ -291,4 +291,11 @@ public class LadderManager : MonoBehaviour
     {
         randomizeHorizontalLines = isOn;
     }
+
+    public RectTransform GetVerticalLineAt(int index)
+    {
+        if (index >= 0 && index < verticalLines.Count)
+            return verticalLines[index].GetComponent<RectTransform>();
+        return null;
+    }
 }

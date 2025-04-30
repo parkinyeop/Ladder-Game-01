@@ -67,4 +67,9 @@ public static class LadderLayoutHelper
     {
         return stepCount * stepHeight;
     }
+
+    public static float GetVisualStartY(RectTransform verticalLine)
+    {
+        return verticalLine.anchoredPosition.y + verticalLine.sizeDelta.y / 2f;
+    }
 }
