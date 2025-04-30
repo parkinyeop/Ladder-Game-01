@@ -30,20 +30,26 @@ public class LadderGenerator
     /// </summary>
     public void GenerateLadder(int verticalCount, int stepCount, int horizontalLineCount, bool randomize)
     {
-        // 1. 기존에 생성된 사다리 오브젝트 제거
+        // 1. 기존 오브젝트 제거
         ClearLadder();
 
-        // 2. 세로줄(Vertical Lines) 생성 및 중앙 정렬 배치
+        // 2. 세로줄 생성
         CreateVerticalLines(verticalCount, stepCount);
 
-        // 3. ladderMap 초기화 및 가로줄 생성 로직 (보장 + 추가)
+        // 3. ladderMap 설정
         SetupHorizontalLines(verticalCount, stepCount, horizontalLineCount, randomize);
 
-        // 4. ladderMap 기반으로 가로줄(Horizontal Lines) UI 오브젝트 배치
+        // 4. 가로줄 UI 생성
         CreateHorizontalLineObjects(verticalCount, stepCount);
 
-        // 5. 골 버튼 생성 및 정렬 배치
+        // 5. 도착 버튼 생성
         CreateDestinationButtons(verticalCount);
+
+        // 6. 출발 버튼 생성
+        CreateStartButtons(verticalCount);
+
+        // 7. 출발 버튼 초기화
+        manager.ResetAllStartButtonColors();
     }
 
     /// <summary>
@@ -333,4 +339,37 @@ public class LadderGenerator
     public void SetSelectedDestination(int index) => selectedDestination = index;
     public int GetSelectedDestination() => selectedDestination;
     private int selectedDestination = -1; // -1: 미선택 상태
+
+    private void CreateStartButtons(int verticalCount)
+    {
+        if (manager == null || manager.startButtonPrefab == null || manager.startButtonsParent == null)
+        {
+            Debug.LogError("🚨 Start 버튼 프리팹 또는 부모가 연결되지 않았습니다.");
+            return;
+        }
+
+        // 기존 버튼 제거
+        foreach (Transform child in manager.startButtonsParent)
+            GameObject.Destroy(child.gameObject);
+        manager.startButtons.Clear();
+
+        float spacingX = 400f;
+        float startX = -((verticalCount - 1) * spacingX) / 2f;
+        float buttonY = 300f;
+
+        for (int i = 0; i < verticalCount; i++)
+        {
+            GameObject buttonGO = GameObject.Instantiate(manager.startButtonPrefab, manager.startButtonsParent);
+            RectTransform rect = buttonGO.GetComponent<RectTransform>();
+            rect.anchoredPosition = new Vector2(startX + i * spacingX, buttonY);
+
+            StartBettingButton btn = buttonGO.GetComponent<StartBettingButton>();
+            btn.startIndex = i;
+            manager.startButtons.Add(btn);
+
+            Text label = buttonGO.GetComponentInChildren<Text>();
+            if (label != null)
+                label.text = (i + 1).ToString();
+        }
+    }
 }

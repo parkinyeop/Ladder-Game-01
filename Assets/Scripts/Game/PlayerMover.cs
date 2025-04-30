@@ -73,9 +73,19 @@ public class PlayerMover
         }
 
         // 정확한 초기 위치를 step 0 기준으로 계산
-        float currentY = LadderLayoutHelper.GetYPosition(0, stepCount, stepHeight);
+        //float currentY = LadderLayoutHelper.GetYPosition(0, stepCount, stepHeight);
 
         // 정확한 초기 위치로 플레이어 설정
+        //rectTransform.anchoredPosition = new Vector2(
+        //    LadderLayoutHelper.GetXPosition(currentX, ladderWidth, ladderManager.verticalCount),
+        //    currentY
+        //);
+
+        // ✅ 세로줄 시작 위치 보정: 실제 세로줄의 y값 기준
+        RectTransform verticalLine = ladderManager.GetVerticalLineAt(currentX);
+        float currentY = LadderLayoutHelper.GetVisualStartY(verticalLine);
+
+        // ✅ 최초 위치 설정
         rectTransform.anchoredPosition = new Vector2(
             LadderLayoutHelper.GetXPosition(currentX, ladderWidth, ladderManager.verticalCount),
             currentY

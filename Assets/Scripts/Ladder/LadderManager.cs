@@ -40,6 +40,10 @@ public class LadderManager : MonoBehaviour
     public Transform destinationButtonsParent;  // 골 버튼 부모
     public GameObject destinationButtonPrefab;
 
+    private StartBettingButton selectedStartButton = null;          // 현재 선택된 출발 버튼
+    public List<StartBettingButton> startButtons = new List<StartBettingButton>(); // 생성된 출발 버튼 목록
+    private int selectedStartIndex = -1;                            // 선택된 출발 세로줄 인덱스
+
     [Header("플레이어 관련")]
     public GameObject playerPrefab;             // 이동할 플레이어 프리팹
     public Transform playerTransform;           // 생성된 플레이어의 Transform 참조
@@ -51,6 +55,12 @@ public class LadderManager : MonoBehaviour
     private GoalBettingButton selectedGoalButton = null;                // 선택된 골 버튼 참조
     private List<GoalBettingButton> destinationButtons = new();        // 모든 골 버튼 리스트
     private List<GameObject> verticalLines = new();                    // 생성된 세로줄 오브젝트 저장
+
+    [Header("출발 버튼 관련")]
+    public GameObject startButtonPrefab;             // 출발 버튼 프리팹
+    public Transform startButtonsParent;             // 출발 버튼들을 담을 부모 오브젝트
+
+    
 
     private const float ladderWidth = 800f;      // 사다리 전체 너비 (위치 정렬 기준)
 
@@ -97,41 +107,59 @@ public class LadderManager : MonoBehaviour
     /// </summary>
     public void OnResultButtonClicked()
     {
-        if (playerMover.IsMoving()) return;
+        // 이미 이동 중이면 무시
+        if (playerMover.IsMoving())
+            return;
 
+        // 골 버튼이 선택되지 않은 경우 → 안내 메시지 후 종료
         if (selectedGoalButton == null)
         {
             resultText.text = "도착 지점을 선택하세요!";
             return;
         }
 
+        // 스타트 버튼이 선택된 경우 해당 인덱스, 아니면 무작위 인덱스 사용
+        int startIndex = selectedStartIndex >= 0 ? selectedStartIndex : Random.Range(0, verticalCount);
+
+        // 이전 플레이어가 존재하면 제거
         if (playerTransform != null)
         {
             Destroy(playerTransform.gameObject);
             playerTransform = null;
         }
 
+        // 프리팹이 연결되지 않은 경우 에러
         if (playerPrefab == null)
         {
             Debug.LogError("[LadderManager] Player 프리팹이 연결되지 않았습니다.");
             return;
         }
 
+        // 새로운 플레이어 생성
         GameObject playerGO = Instantiate(playerPrefab, ladderRoot);
         playerTransform = playerGO.transform;
 
-        int randomStartIndex = Random.Range(0, verticalCount);
-        float x = LadderLayoutHelper.GetXPosition(randomStartIndex, ladderWidth, verticalCount);
+        // 플레이어 위치 계산 (UI 기준 anchoredPosition)
+        float x = LadderLayoutHelper.GetXPosition(startIndex, ladderWidth, verticalCount);
         float y = LadderLayoutHelper.GetStartY(stepCount, stepHeight);
 
+        // 위치 지정 (RectTransform 기준)
         RectTransform rect = playerTransform.GetComponent<RectTransform>();
         if (rect != null)
+        {
             rect.anchoredPosition = new Vector2(x, y);
+        }
+        else
+        {
+            Debug.LogError("[LadderManager] Player에 RectTransform이 없습니다.");
+        }
 
-        playerMover.Setup(playerTransform, randomStartIndex, 500f);
-        playerMover.SetFinishCallback(CheckResult);
-        playerMover.StartMove(this);
+        // 이동 세팅 및 실행
+        playerMover.Setup(playerTransform, startIndex, 500f);      // 위치, 속도 설정
+        playerMover.SetFinishCallback(CheckResult);                // 도착 후 결과 체크 콜백
+        playerMover.StartMove(this);                               // 코루틴으로 이동 시작
 
+        // 버튼 비활성화 → 도착 후 다시 활성화
         resultButton.interactable = false;
     }
 
@@ -297,5 +325,92 @@ public class LadderManager : MonoBehaviour
         if (index >= 0 && index < verticalLines.Count)
             return verticalLines[index].GetComponent<RectTransform>();
         return null;
+    }
+
+    public void SetSelectedStart(int index)
+    {
+        selectedStartIndex = index;
+    }
+
+    public void HighlightSelectedStartButton(StartBettingButton selectedButton)
+    {
+        if (selectedStartButton != null)
+            selectedStartButton.ResetColor();
+
+        if (selectedButton != null)
+            selectedButton.Highlight();
+
+        DimOtherStartButtons(selectedButton);
+        selectedStartButton = selectedButton;
+    }
+
+    private void DimOtherStartButtons(StartBettingButton selectedButton)
+    {
+        foreach (var btn in startButtons)
+        {
+            if (btn != null && btn != selectedButton)
+                btn.Dim();
+        }
+    }
+
+    //public void ResetAllStartButtonColors()
+    //{
+    //    foreach (var btn in startButtons)
+    //    {
+    //        if (btn != null)
+    //            btn.ResetColor();
+    //    }
+    //    selectedStartButton = null;
+    //    selectedStartIndex = -1;
+    //}
+
+    public void InitializeStartButtons(int verticalCount)
+    {
+        // 1. 부모 체크
+        if (startButtonsParent == null || startButtonPrefab == null)
+        {
+            Debug.LogError("🚨 StartButtonsParent 또는 StartButtonPrefab이 설정되지 않았습니다.");
+            return;
+        }
+
+        // 2. 기존 자식 제거
+        foreach (Transform child in startButtonsParent)
+            GameObject.Destroy(child.gameObject);
+        startButtons.Clear();
+
+        // 3. 버튼 생성 및 배치
+        float spacingX = 400f;
+        float startX = -((verticalCount - 1) * spacingX) / 2f;
+        float buttonY = 300f; // 상단 배치
+
+        for (int i = 0; i < verticalCount; i++)
+        {
+            GameObject buttonGO = GameObject.Instantiate(startButtonPrefab, startButtonsParent);
+            RectTransform rect = buttonGO.GetComponent<RectTransform>();
+            rect.anchoredPosition = new Vector2(startX + i * spacingX, buttonY);
+
+            StartBettingButton btn = buttonGO.GetComponent<StartBettingButton>();
+            btn.startIndex = i;
+            startButtons.Add(btn);
+
+            // 텍스트 설정
+            Text label = buttonGO.GetComponentInChildren<Text>();
+            if (label != null)
+                label.text = $"S{i + 1}";
+        }
+    }
+
+    /// <summary>
+    /// 모든 Start 버튼 색상을 초기화 (선택 해제)
+    /// </summary>
+    public void ResetAllStartButtonColors()
+    {
+        foreach (var button in startButtons)
+        {
+            if (button != null)
+                button.ResetColor(); // StartBettingButton 클래스 내부 함수
+        }
+        selectedStartButton = null;
+        selectedStartIndex = -1;
     }
 }
