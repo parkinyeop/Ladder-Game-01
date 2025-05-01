@@ -30,11 +30,19 @@ public class StartBettingButton : MonoBehaviour
 
     private void SelectStart()
     {
-        if (ladderManager != null)
+        if (ladderManager == null)
+            return;
+
+        // ✅ 골 버튼이 먼저 선택되지 않은 경우 클릭 무시
+        if (!ladderManager.IsGoalSelected())
         {
-            ladderManager.SetSelectedStart(startIndex);   // ⭐ 선택 인덱스 전달
-            ladderManager.HighlightSelectedStartButton(this);
+            Debug.LogWarning("⚠ 먼저 골 지점을 선택해주세요.");
+            ladderManager.ShowResultMessage("⚠ 도착 지점을 먼저 선택하세요.");
+            return;
         }
+
+        ladderManager.SetSelectedStart(startIndex);
+        ladderManager.HighlightSelectedStartButton(this);
     }
 
     public void Highlight()

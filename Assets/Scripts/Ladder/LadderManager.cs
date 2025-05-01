@@ -424,4 +424,21 @@ public class LadderManager : MonoBehaviour
         selectedStartButton = null;
         selectedStartIndex = -1;
     }
+
+    /// <summary>
+    /// 골 버튼이 선택되었는지 여부 반환
+    /// </summary>
+    public bool IsGoalSelected()
+    {
+        return selectedGoalButton != null;
+    }
+
+    /// <summary>
+    /// 결과 메시지 텍스트에 표시
+    /// </summary>
+    public void ShowResultMessage(string message)
+    {
+        if (resultText != null)
+            resultText.text = message;
+    }
 }
