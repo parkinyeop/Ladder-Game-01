@@ -61,7 +61,7 @@ public class LadderGenerator
     {
         ladderMap = new bool[stepCount, verticalCount - 1];
 
-        Debug.Log("[Ladder] 최소 보장 가로줄 생성 시작");
+        //Debug.Log("[Ladder] 최소 보장 가로줄 생성 시작");
 
         // 1. 모든 세로줄 쌍(x)에 대해 1개 이상 보장
         for (int x = 0; x < verticalCount - 1; x++)
@@ -74,7 +74,7 @@ public class LadderGenerator
                 if (CanPlaceHorizontalLine(y, x, verticalCount))
                 {
                     ladderMap[y, x] = true;
-                    Debug.Log($"[보장 생성] x={x}, y={y}");
+                    //Debug.Log($"[보장 생성] x={x}, y={y}");
                     placed = true;
                 }
                 attempts++;
@@ -94,7 +94,7 @@ public class LadderGenerator
             ? Mathf.Max(0, Random.Range(0, verticalCount + 4) - guaranteedLines)
             : Mathf.Max(0, horizontalLineCount - guaranteedLines);
 
-        Debug.Log($"[Ladder] 추가 가로줄 생성 시도: {additionalCount}개");
+        //Debug.Log($"[Ladder] 추가 가로줄 생성 시도: {additionalCount}개");
 
         int created = 0;
         int maxTries = additionalCount * 10;
@@ -109,7 +109,7 @@ public class LadderGenerator
             {
                 ladderMap[y, x] = true;
                 created++;
-                Debug.Log($"[추가 생성] x={x}, y={y}");
+                //Debug.Log($"[추가 생성] x={x}, y={y}");
             }
 
             tries++;
@@ -117,7 +117,7 @@ public class LadderGenerator
 
         if (created < additionalCount)
         {
-            Debug.LogWarning($"[추가 생성 중단] 목표 {additionalCount}개 중 {created}개만 생성됨");
+            //Debug.LogWarning($"[추가 생성 중단] 목표 {additionalCount}개 중 {created}개만 생성됨");
         }
     }
 
@@ -179,7 +179,7 @@ public class LadderGenerator
                 rect.pivot = new Vector2(0.5f, 0.5f);
                 rect.localScale = Vector3.one;
 
-                Debug.Log($"✅ [세로줄 생성] index={i}, x={posX}, height={totalHeight}");
+                //Debug.Log($"✅ [세로줄 생성] index={i}, x={posX}, height={totalHeight}");
             }
             else
             {
@@ -255,7 +255,7 @@ public class LadderGenerator
                 // 해당 위치에 가로줄이 없다면 생성 생략
                 if (!ladderMap[y, x])
                 {
-                    Debug.Log($"[스킵] ladderMap[{y},{x}] = false");
+                    //Debug.Log($"[스킵] ladderMap[{y},{x}] = false");
                     continue;
                 }
 
@@ -265,7 +265,7 @@ public class LadderGenerator
 
                 if (left == null || right == null)
                 {
-                    Debug.LogWarning($"⚠ 세로줄 {x} 또는 {x + 1}의 RectTransform이 null입니다.");
+                    //Debug.LogWarning($"⚠ 세로줄 {x} 또는 {x + 1}의 RectTransform이 null입니다.");
                     continue;
                 }
 
@@ -300,11 +300,11 @@ public class LadderGenerator
                         if (imageRect != null)
                         {
                             imageRect.sizeDelta = new Vector2(width, imageRect.sizeDelta.y);
-                            Debug.Log($"📏 [Image 길이 조정] width={width}");
+                            //Debug.Log($"📏 [Image 길이 조정] width={width}");
                         }
                     }
 
-                    Debug.Log($"✅ [생성] step={y}, x={x}, pos=({centerX}, {posY}), width={width}");
+                    //Debug.Log($"✅ [생성] step={y}, x={x}, pos=({centerX}, {posY}), width={width}");
                 }
                 else
                 {
@@ -353,15 +353,16 @@ public class LadderGenerator
             GameObject.Destroy(child.gameObject);
         manager.startButtons.Clear();
 
-        float spacingX = 400f;
-        float startX = -((verticalCount - 1) * spacingX) / 2f;
         float buttonY = 300f;
 
         for (int i = 0; i < verticalCount; i++)
         {
+            // ⭐ LadderLayoutHelper.GetXPosition 사용
+            float x = LadderLayoutHelper.GetXPosition(i, manager.ladderWidth, verticalCount);
+
             GameObject buttonGO = GameObject.Instantiate(manager.startButtonPrefab, manager.startButtonsParent);
             RectTransform rect = buttonGO.GetComponent<RectTransform>();
-            rect.anchoredPosition = new Vector2(startX + i * spacingX, buttonY);
+            rect.anchoredPosition = new Vector2(x, buttonY);
 
             StartBettingButton btn = buttonGO.GetComponent<StartBettingButton>();
             btn.startIndex = i;

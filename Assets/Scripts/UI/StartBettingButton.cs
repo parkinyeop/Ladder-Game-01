@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -52,5 +53,19 @@ public class StartBettingButton : MonoBehaviour
     {
         if (button != null && button.targetGraphic != null)
             button.targetGraphic.color = DefaultColor;
+    }
+
+    public static float GetXPosition(int index, float ladderWidth, int verticalCount)
+    {
+        return -ladderWidth / 2f + (index * ladderWidth / (verticalCount - 1));
+    }
+
+    public static float CalculateActualLadderWidth(List<GameObject> verticalLines)
+    {
+        if (verticalLines == null || verticalLines.Count < 2)
+            return 800f; // fallback
+        float left = verticalLines[0].GetComponent<RectTransform>().anchoredPosition.x;
+        float right = verticalLines[verticalLines.Count - 1].GetComponent<RectTransform>().anchoredPosition.x;
+        return Mathf.Abs(right - left);
     }
 }

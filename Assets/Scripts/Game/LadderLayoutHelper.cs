@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -71,5 +72,18 @@ public static class LadderLayoutHelper
     public static float GetVisualStartY(RectTransform verticalLine)
     {
         return verticalLine.anchoredPosition.y + verticalLine.sizeDelta.y / 2f;
+    }
+
+    /// <summary>
+    /// 실제 생성된 세로줄의 RectTransform 좌표로부터 사다리 폭 계산
+    /// </summary>
+    public static float CalculateActualLadderWidth(List<GameObject> verticalLines)
+    {
+        if (verticalLines == null || verticalLines.Count < 2)
+            return 800f; // fallback 기본값
+
+        float left = verticalLines[0].GetComponent<RectTransform>().anchoredPosition.x;
+        float right = verticalLines[verticalLines.Count - 1].GetComponent<RectTransform>().anchoredPosition.x;
+        return Mathf.Abs(right - left);
     }
 }

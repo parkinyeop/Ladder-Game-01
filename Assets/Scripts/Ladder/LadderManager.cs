@@ -60,9 +60,10 @@ public class LadderManager : MonoBehaviour
     public GameObject startButtonPrefab;             // 출발 버튼 프리팹
     public Transform startButtonsParent;             // 출발 버튼들을 담을 부모 오브젝트
 
-    
 
-    private const float ladderWidth = 800f;      // 사다리 전체 너비 (위치 정렬 기준)
+
+    //private const float ladderWidth = 800f;      // 사다리 전체 너비 (위치 정렬 기준)
+    public float ladderWidth = 800f;
 
     private void Start()
     {
@@ -131,7 +132,7 @@ public class LadderManager : MonoBehaviour
         // 프리팹이 연결되지 않은 경우 에러
         if (playerPrefab == null)
         {
-            Debug.LogError("[LadderManager] Player 프리팹이 연결되지 않았습니다.");
+            //Debug.logError("[LadderManager] Player 프리팹이 연결되지 않았습니다.");
             return;
         }
 
@@ -151,7 +152,7 @@ public class LadderManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[LadderManager] Player에 RectTransform이 없습니다.");
+            //Debug.logError("[LadderManager] Player에 RectTransform이 없습니다.");
         }
 
         // 이동 세팅 및 실행
@@ -353,48 +354,58 @@ public class LadderManager : MonoBehaviour
         }
     }
 
-    //public void ResetAllStartButtonColors()
-    //{
-    //    foreach (var btn in startButtons)
-    //    {
-    //        if (btn != null)
-    //            btn.ResetColor();
-    //    }
-    //    selectedStartButton = null;
-    //    selectedStartIndex = -1;
-    //}
 
+    /// <summary>
+    /// 출발(Start) 버튼 생성 및 위치 배치
+    /// - 세로줄의 실제 위치를 기준으로 정확히 정렬됨
+    /// - GetXPosition() 사용 시, 실측 ladderWidth를 반영해야 위치 불일치 해결 가능
+    /// </summary>
     public void InitializeStartButtons(int verticalCount)
     {
-        // 1. 부모 체크
+        //Debug.log($"✅ InitializeStartButtons 실행됨 verticalCount={verticalCount}");
+
+        // 1. 유효성 검사: 부모 객체와 프리팹이 유효한지 확인
         if (startButtonsParent == null || startButtonPrefab == null)
         {
-            Debug.LogError("🚨 StartButtonsParent 또는 StartButtonPrefab이 설정되지 않았습니다.");
+            //Debug.logError("🚨 StartButtonsParent 또는 StartButtonPrefab이 설정되지 않았습니다.");
             return;
         }
 
-        // 2. 기존 자식 제거
+        // 2. 기존 버튼 제거
         foreach (Transform child in startButtonsParent)
-            GameObject.Destroy(child.gameObject);
+            Destroy(child.gameObject);
         startButtons.Clear();
 
-        // 3. 버튼 생성 및 배치
-        float spacingX = 400f;
-        float startX = -((verticalCount - 1) * spacingX) / 2f;
-        float buttonY = 300f; // 상단 배치
+        // 3. 스타트 버튼 배치 기준 Y 값 (상단 고정)
+        float buttonY = 300f;
 
+        // 4. 세로줄 기준으로 실제 너비 계산 (가변 ladderWidth 반영)
+        float actualLadderWidth = LadderLayoutHelper.CalculateActualLadderWidth(GetVerticalLines());
+
+        // 5. 스타트 버튼 생성 및 배치
         for (int i = 0; i < verticalCount; i++)
         {
-            GameObject buttonGO = GameObject.Instantiate(startButtonPrefab, startButtonsParent);
-            RectTransform rect = buttonGO.GetComponent<RectTransform>();
-            rect.anchoredPosition = new Vector2(startX + i * spacingX, buttonY);
+            // 정확한 X 위치 계산 (실측 ladderWidth 사용)
+            float x = LadderLayoutHelper.GetXPosition(i, actualLadderWidth, verticalCount);
+            //Debug.log($"🟢 스타트 버튼 index={i}, x={x}");
 
-            StartBettingButton btn = buttonGO.GetComponent<StartBettingButton>();
+            GameObject startButtonGO = Instantiate(startButtonPrefab, startButtonsParent);
+            RectTransform rect = startButtonGO.GetComponent<RectTransform>();
+
+            // anchor 및 pivot 설정 (중앙 기준)
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+
+            rect.anchoredPosition = new Vector2(x, buttonY);
+
+            // 버튼 스크립트 설정
+            StartBettingButton btn = startButtonGO.GetComponent<StartBettingButton>();
             btn.startIndex = i;
             startButtons.Add(btn);
 
-            // 텍스트 설정
-            Text label = buttonGO.GetComponentInChildren<Text>();
+            // 텍스트 라벨 설정
+            Text label = startButtonGO.GetComponentInChildren<Text>();
             if (label != null)
                 label.text = $"S{i + 1}";
         }
