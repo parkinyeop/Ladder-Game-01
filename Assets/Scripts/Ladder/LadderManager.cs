@@ -24,6 +24,10 @@ public class LadderManager : MonoBehaviour
     public Button resultButton;
     public Text resultText;
 
+    [Header("보드 UI")]
+    public GameObject board;               // 보드 패널
+    public Text boardText;                // 보드 내 메시지 출력용 텍스트
+
     [Header("세로/가로줄 수 조절 UI")]
     public Button increaseVerticalButton;
     public Button decreaseVerticalButton;
@@ -98,7 +102,12 @@ public class LadderManager : MonoBehaviour
     {
         generator.GenerateLadder(verticalCount, stepCount, horizontalLineCount, randomizeHorizontalLines);
         ResetAllGoalButtonColors();
-        resultText.text = "도착 지점을 선택하세요!";
+
+        // ✅ 보드 활성화 및 메시지 출력
+        if (board != null) board.SetActive(true);
+        if (boardText != null) boardText.text = "도착 지점을 선택하세요!";
+
+        //resultText.text = "도착 지점을 선택하세요!";
         resultButton.interactable = true;
 
         // ⭐ 스타트 버튼은 처음에 비활성화
@@ -115,12 +124,22 @@ public class LadderManager : MonoBehaviour
         if (playerMover.IsMoving())
             return;
 
-        // 골 버튼이 선택되지 않은 경우 → 안내 메시지 후 종료
         if (selectedGoalButton == null)
         {
-            resultText.text = "도착 지점을 선택하세요!";
+            // ✅ 보드에 안내 메시지 출력
+            if (boardText != null) boardText.text = "도착 지점을 선택하세요!";
             return;
         }
+
+        // ✅ 보드 비활성화
+        if (board != null) board.SetActive(false);
+
+        // 골 버튼이 선택되지 않은 경우 → 안내 메시지 후 종료
+        //if (selectedGoalButton == null)
+        //{
+        //    resultText.text = "도착 지점을 선택하세요!";
+        //    return;
+        //}
 
         // 스타트 버튼이 선택된 경우 해당 인덱스, 아니면 무작위 인덱스 사용
         int startIndex = selectedStartIndex >= 0 ? selectedStartIndex : Random.Range(0, verticalCount);
