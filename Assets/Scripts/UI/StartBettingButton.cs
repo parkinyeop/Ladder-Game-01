@@ -76,4 +76,16 @@ public class StartBettingButton : MonoBehaviour
         float right = verticalLines[verticalLines.Count - 1].GetComponent<RectTransform>().anchoredPosition.x;
         return Mathf.Abs(right - left);
     }
+
+    /// <summary>
+    /// 버튼 자체의 클릭 가능 여부 설정
+    /// </summary>
+    public void SetInteractable(bool interactable)
+    {
+        if (button == null)
+            button = GetComponent<Button>();
+
+        if (button != null)
+            button.interactable = interactable;
+    }
 }

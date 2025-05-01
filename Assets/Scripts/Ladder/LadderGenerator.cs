@@ -50,6 +50,7 @@ public class LadderGenerator
 
         // 7. 출발 버튼 초기화
         manager.ResetAllStartButtonColors();
+
     }
 
     /// <summary>

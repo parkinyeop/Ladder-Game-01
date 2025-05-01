@@ -100,6 +100,9 @@ public class LadderManager : MonoBehaviour
         ResetAllGoalButtonColors();
         resultText.text = "도착 지점을 선택하세요!";
         resultButton.interactable = true;
+
+        // ⭐ 스타트 버튼은 처음에 비활성화
+        SetStartButtonsInteractable(false);
     }
 
     /// <summary>
@@ -191,6 +194,9 @@ public class LadderManager : MonoBehaviour
         selectedButton?.Highlight();
         DimOtherGoalButtons(selectedButton);
         selectedGoalButton = selectedButton;
+
+        // ✅ 골 선택되었으므로 스타트 버튼 활성화
+        SetStartButtonsInteractable(true);
     }
 
     private void DimOtherGoalButtons(GoalBettingButton selectedButton)
@@ -440,5 +446,17 @@ public class LadderManager : MonoBehaviour
     {
         if (resultText != null)
             resultText.text = message;
+    }
+
+    /// <summary>
+    /// 모든 스타트 버튼을 활성화 또는 비활성화
+    /// </summary>
+    public void SetStartButtonsInteractable(bool interactable)
+    {
+        foreach (var btn in startButtons)
+        {
+            if (btn != null)
+                btn.SetInteractable(interactable);
+        }
     }
 }
