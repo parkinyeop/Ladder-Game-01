@@ -207,14 +207,43 @@ public class LadderManager : MonoBehaviour
     /// <summary>
     /// 버튼 하이라이트 처리 (선택 버튼 강조, 나머지 Dim 처리)
     /// </summary>
-    public void HighlightSelectedGoalButton(GoalBettingButton selectedButton)
-    {
-        selectedGoalButton?.ResetColor();
-        selectedButton?.Highlight();
-        DimOtherGoalButtons(selectedButton);
-        selectedGoalButton = selectedButton;
+    //public void HighlightSelectedGoalButton(GoalBettingButton selectedButton)
+    //{
+    //    selectedGoalButton?.ResetColor();
+    //    selectedButton?.Highlight();
+    //    DimOtherGoalButtons(selectedButton);
+    //    selectedGoalButton = selectedButton;
 
-        // ✅ 골 선택되었으므로 스타트 버튼 활성화
+    //    // ✅ 골 선택되었으므로 스타트 버튼 활성화
+    //    SetStartButtonsInteractable(true);
+    //}
+
+    public void HighlightSelectedGoalButton(GoalBettingButton clickedButton)
+    {
+        // 이미 선택된 버튼을 다시 클릭한 경우 → 선택 해제
+    if (selectedGoalButton == clickedButton)
+        {
+            clickedButton.ResetColor();     // 자기 자신 원래 색상으로 복원
+            ResetAllGoalButtonColors();     // 전체 버튼 초기화
+            selectedGoalButton = null;
+
+            // ✅ 스타트 버튼 비활성화
+            SetStartButtonsInteractable(false);
+            return;
+        }
+
+        // 이전 선택된 버튼 색상 복원
+        selectedGoalButton?.ResetColor();
+
+        // 새로 선택된 버튼 강조
+        clickedButton.Highlight();
+
+        // 나머지 버튼 dim 처리
+        DimOtherGoalButtons(clickedButton);
+
+        selectedGoalButton = clickedButton;
+
+        // ✅ 골 버튼 선택되었으므로 스타트 버튼들 활성화
         SetStartButtonsInteractable(true);
     }
 
@@ -470,12 +499,13 @@ public class LadderManager : MonoBehaviour
     /// <summary>
     /// 모든 스타트 버튼을 활성화 또는 비활성화
     /// </summary>
-    public void SetStartButtonsInteractable(bool interactable)
+    private void SetStartButtonsInteractable(bool isOn)
     {
         foreach (var btn in startButtons)
         {
-            if (btn != null)
-                btn.SetInteractable(interactable);
+            Button uiButton = btn.GetComponent<Button>();
+            if (uiButton != null)
+                uiButton.interactable = isOn;
         }
     }
 }
