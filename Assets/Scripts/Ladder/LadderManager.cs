@@ -100,6 +100,11 @@ public class LadderManager : MonoBehaviour
     /// </summary>
     public void GenerateLadder()
     {
+        // ✅ 가로줄 수를 세로줄 수 기반으로 완전 랜덤하게 결정 (-1 ~ +3)
+        int min = Mathf.Max(1, verticalCount - 1);
+        int max = verticalCount + 3;
+        horizontalLineCount = Random.Range(min, max + 1); // max 포함
+
         generator.GenerateLadder(verticalCount, stepCount, horizontalLineCount, randomizeHorizontalLines);
         ResetAllGoalButtonColors();
 
@@ -107,10 +112,9 @@ public class LadderManager : MonoBehaviour
         if (board != null) board.SetActive(true);
         if (boardText != null) boardText.text = "도착 지점을 선택하세요!";
 
-        //resultText.text = "도착 지점을 선택하세요!";
         resultButton.interactable = true;
 
-        // ⭐ 스타트 버튼은 처음에 비활성화
+        // ✅ 스타트 버튼은 골 선택 후에만 활성화되므로 기본은 비활성화
         SetStartButtonsInteractable(false);
     }
 
