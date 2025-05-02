@@ -64,9 +64,10 @@ public class LadderManager : MonoBehaviour
     public GameObject startButtonPrefab;             // 출발 버튼 프리팹
     public Transform startButtonsParent;             // 출발 버튼들을 담을 부모 오브젝트
 
+    [SerializeField] private BetAmountUIManager betUIManager;
+    public BetAmountUIManager betAmountUIManager;
 
-
-    //private const float ladderWidth = 800f;      // 사다리 전체 너비 (위치 정렬 기준)
+    private bool isLadderGenerated = false;  // READY 상태 → GO 상태 전환 여부
     public float ladderWidth = 800f;
 
     private void Start()
@@ -74,13 +75,36 @@ public class LadderManager : MonoBehaviour
         generator = new LadderGenerator(this);
         playerMover = new PlayerMover(this);
 
+        if (betAmountUIManager != null)
+        {
+            betAmountUIManager.OnBetConfirmed += OnBetConfirmedHandler;
+        }
+        else
+        {
+            Debug.LogError("🚨 BetAmountUIManager가 연결되지 않았습니다.");
+        }
+
         SetupUI();
 
         generateButton.onClick.AddListener(GenerateLadder);
-        resultButton.onClick.AddListener(OnResultButtonClicked);
+        resultButton.onClick.AddListener(OnResultButtonPressed); // ✅ 상태 기반 처리
 
         UpdateVerticalCountText();
         UpdateHorizontalLineCountText();
+
+        // ✅ 결과 버튼 텍스트 초기화
+        if (resultButton != null)
+        {
+            var txt = resultButton.GetComponentInChildren<Text>();
+            if (txt != null)
+                txt.text = "READY";
+        }
+    }
+
+    private void OnBetAmountConfirmed(int amount)
+    {
+        Debug.Log($"💰 확정된 배팅 금액: {amount}");
+        // 내부 게임 로직에서 활용
     }
 
     /// <summary>
@@ -100,21 +124,23 @@ public class LadderManager : MonoBehaviour
     /// </summary>
     public void GenerateLadder()
     {
-        // ✅ 가로줄 수를 세로줄 수 기반으로 완전 랜덤하게 결정 (-1 ~ +3)
+        // 가로줄 수 무작위 생성
         int min = Mathf.Max(1, verticalCount - 1);
         int max = verticalCount + 3;
-        horizontalLineCount = Random.Range(min, max + 1); // max 포함
+        horizontalLineCount = Random.Range(min, max + 1);
 
         generator.GenerateLadder(verticalCount, stepCount, horizontalLineCount, randomizeHorizontalLines);
         ResetAllGoalButtonColors();
 
-        // ✅ 보드 활성화 및 메시지 출력
         if (board != null) board.SetActive(true);
         if (boardText != null) boardText.text = "도착 지점을 선택하세요!";
 
-        resultButton.interactable = true;
+        // ✅ 결과 버튼 텍스트를 "READY"로 변경
+        resultButton.GetComponentInChildren<Text>().text = "READY";
 
-        // ✅ 스타트 버튼은 골 선택 후에만 활성화되므로 기본은 비활성화
+        // ✅ GO 실행 잠금: 골 선택 전까지 비활성화
+        resultButton.interactable = false;
+
         SetStartButtonsInteractable(false);
     }
 
@@ -138,19 +164,19 @@ public class LadderManager : MonoBehaviour
         // ✅ 보드 비활성화
         if (board != null) board.SetActive(false);
 
-        // 골 버튼이 선택되지 않은 경우 → 안내 메시지 후 종료
-        //if (selectedGoalButton == null)
-        //{
-        //    resultText.text = "도착 지점을 선택하세요!";
-        //    return;
-        //}
-
         // 스타트 버튼이 선택된 경우 해당 인덱스, 아니면 무작위 인덱스 사용
         int startIndex = selectedStartIndex >= 0 ? selectedStartIndex : Random.Range(0, verticalCount);
+
+        // ⭐ 랜덤일 경우에도 하이라이트 적용
+        if (selectedStartIndex < 0 && startIndex >= 0 && startIndex < startButtons.Count)
+        {
+            HighlightSelectedStartButton(startButtons[startIndex]);
+        }
 
         // 이전 플레이어가 존재하면 제거
         if (playerTransform != null)
         {
+            playerMover.StopMove(this);
             Destroy(playerTransform.gameObject);
             playerTransform = null;
         }
@@ -197,7 +223,16 @@ public class LadderManager : MonoBehaviour
     {
         int selectedIndex = generator.GetSelectedDestination();
         resultText.text = (arrivedIndex == selectedIndex) ? "🎉 성공!" : "❌ 실패!";
+        Debug.Log($"[결과] 도착 인덱스: {arrivedIndex}, 선택 인덱스: {selectedIndex}");
+
+        // ✅ 로그도 성공/실패에 따라 명확히 출력
+        if (arrivedIndex == selectedIndex)
+            Debug.Log("✅ 성공! 도착 지점이 선택한 골과 일치합니다.");
+        else
+            Debug.Log("❌ 실패! 도착 지점이 선택한 골과 다릅니다.");
+
         resultButton.interactable = true;
+        resultButton.GetComponentInChildren<Text>().text = "READY"; // 버튼 상태 초기화
     }
 
     /// <summary>
@@ -208,33 +243,28 @@ public class LadderManager : MonoBehaviour
         generator.SetSelectedDestination(index);
     }
 
-    /// <summary>
-    /// 버튼 하이라이트 처리 (선택 버튼 강조, 나머지 Dim 처리)
-    /// </summary>
-    //public void HighlightSelectedGoalButton(GoalBettingButton selectedButton)
-    //{
-    //    selectedGoalButton?.ResetColor();
-    //    selectedButton?.Highlight();
-    //    DimOtherGoalButtons(selectedButton);
-    //    selectedGoalButton = selectedButton;
-
-    //    // ✅ 골 선택되었으므로 스타트 버튼 활성화
-    //    SetStartButtonsInteractable(true);
-    //}
-
     public void HighlightSelectedGoalButton(GoalBettingButton clickedButton)
     {
         // 이미 선택된 버튼을 다시 클릭한 경우 → 선택 해제
-    if (selectedGoalButton == clickedButton)
-        {
-            clickedButton.ResetColor();     // 자기 자신 원래 색상으로 복원
-            ResetAllGoalButtonColors();     // 전체 버튼 초기화
-            selectedGoalButton = null;
-
-            // ✅ 스타트 버튼 비활성화
-            SetStartButtonsInteractable(false);
+        // 이미 선택된 버튼 다시 클릭 → 처리 생략 (또는 해제 로직 추가 가능)
+        if (selectedGoalButton == clickedButton)
             return;
-        }
+
+        selectedGoalButton?.ResetColor();
+        clickedButton.Highlight();
+        DimOtherGoalButtons(clickedButton);
+        selectedGoalButton = clickedButton;
+
+        SetStartButtonsInteractable(true); // ⭐ 골 선택 시 스타트 버튼 활성화
+
+        // ✅ 결과 버튼을 GO 상태로 활성화
+        var txt = resultButton.GetComponentInChildren<Text>();
+        if (txt != null)
+            txt.text = "GO";
+
+        resultButton.interactable = true; // ⭐ 골 선택 시 GO 버튼 활성화
+
+
 
         // 이전 선택된 버튼 색상 복원
         selectedGoalButton?.ResetColor();
@@ -249,6 +279,48 @@ public class LadderManager : MonoBehaviour
 
         // ✅ 골 버튼 선택되었으므로 스타트 버튼들 활성화
         SetStartButtonsInteractable(true);
+    }
+
+    public void OnResultButtonPressed()
+    {
+        //string label = resultButton.GetComponentInChildren<Text>().text;
+
+        //if (label == "READY")
+        //{
+        //    GenerateLadder(); // ✅ 사다리 생성 모드
+        //}
+        //else if (label == "GO")
+        //{
+        //    OnResultButtonClicked(); // ✅ 결과 실행
+        //}
+
+        string label = resultButton.GetComponentInChildren<Text>().text;
+
+        if (label == "READY")
+        {
+            GenerateLadder(); // 사다리 및 UI 생성
+            resultButton.GetComponentInChildren<Text>().text = "GO"; // 상태 전환
+            isLadderGenerated = true;
+        }
+        else if (label == "GO")
+        {
+            if (selectedGoalButton == null)
+            {
+                if (boardText != null) boardText.text = "도착 지점을 선택하세요!";
+                return;
+            }
+
+            // 결과 실행
+            OnResultButtonClicked();
+
+            // 완료 후 버튼을 다시 READY로 되돌리기
+            resultButton.GetComponentInChildren<Text>().text = "READY";
+            isLadderGenerated = false;
+
+            // 초기화
+            //ResetAllGoalButtonColors();
+            //ResetAllStartButtonColors();
+        }
     }
 
     private void DimOtherGoalButtons(GoalBettingButton selectedButton)
@@ -267,31 +339,36 @@ public class LadderManager : MonoBehaviour
             button?.ResetColor();
         }
         selectedGoalButton = null;
+
     }
 
     /// <summary>
     /// 골 버튼 생성 및 위치 설정
+    /// - 각 버튼에 배당률 텍스트를 설정
+    /// - destinationIndex를 정확히 할당해야 선택 결과가 올바르게 작동
     /// </summary>
     public void InitializeDestinationButtons(int verticalCount)
     {
+        // 기존 골 버튼 오브젝트 제거
         foreach (Transform child in destinationButtonsParent)
             Destroy(child.gameObject);
         destinationButtons.Clear();
 
+        // 세로줄 기준으로 버튼 위치 계산 및 생성
         for (int i = 0; i < verticalCount; i++)
         {
+            // 골 버튼 프리팹 생성 및 위치 설정
             GameObject buttonGO = Instantiate(destinationButtonPrefab, destinationButtonsParent);
             RectTransform rect = buttonGO.GetComponent<RectTransform>();
             float x = LadderLayoutHelper.GetXPosition(i, ladderWidth, verticalCount);
-            rect.anchoredPosition = new Vector2(x, -300f); // 아래 고정 위치
+            rect.anchoredPosition = new Vector2(x, -300f); // Y값 고정된 아래 위치
 
+            // GoalBettingButton 설정
             GoalBettingButton btn = buttonGO.GetComponent<GoalBettingButton>();
-            btn.destinationIndex = i;
-            destinationButtons.Add(btn);
+            btn.destinationIndex = i;                          // ✅ 꼭 설정해야 결과 판단 가능
+            btn.SetMultiplierText(verticalCount);              // ✅ 배당률 텍스트 설정
 
-            Text txt = buttonGO.GetComponentInChildren<Text>();
-            if (txt != null)
-                txt.text = (i + 1).ToString();
+            destinationButtons.Add(btn);
         }
     }
 
@@ -511,5 +588,14 @@ public class LadderManager : MonoBehaviour
             if (uiButton != null)
                 uiButton.interactable = isOn;
         }
+    }
+
+    // ✅ BetAmountUIManager에서 배팅 확정되었을 때 호출되는 핸들러
+    private void OnBetConfirmedHandler(int betAmount)
+    {
+        Debug.Log($"💰 배팅 금액 확정됨: {betAmount}원");
+
+        // 예시: 확인 버튼 활성화, 로그 표시 등 필요한 로직 여기에 작성
+        // resultButton.interactable = true;
     }
 }

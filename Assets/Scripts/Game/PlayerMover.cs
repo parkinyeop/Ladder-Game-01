@@ -130,23 +130,37 @@ public class PlayerMover
     /// </summary>
     private IEnumerator MoveTo(Vector2 target)
     {
+        if (playerTransform == null)
+            yield break;
+
         RectTransform rectTransform = playerTransform.GetComponent<RectTransform>();
+
+        // rectTransform이 이미 파괴된 경우 즉시 종료
         if (rectTransform == null)
             yield break;
 
-        // MoveTowards를 이용한 프레임 단위 이동
-        while (Vector2.Distance(rectTransform.anchoredPosition, target) > 0.01f)
+        while (true)
         {
+            // 이 지점에서도 계속 살아있는지 확인
+            if (playerTransform == null || rectTransform == null)
+                yield break;
+
+            // 목표 위치에 도달했으면 종료
+            if (Vector2.Distance(rectTransform.anchoredPosition, target) <= 0.01f)
+                break;
+
             rectTransform.anchoredPosition = Vector2.MoveTowards(
                 rectTransform.anchoredPosition,
                 target,
                 moveSpeed * Time.deltaTime
             );
+
             yield return null;
         }
 
-        // 정확한 위치 정렬
-        rectTransform.anchoredPosition = target;
+        // 마지막 위치 보정
+        if (rectTransform != null)
+            rectTransform.anchoredPosition = target;
     }
 
     /// <summary>
@@ -155,5 +169,17 @@ public class PlayerMover
     public bool IsMoving()
     {
         return isMoving;
+    }
+
+    // PlayerMover.cs 내부
+    public void StopMove(MonoBehaviour owner)
+    {
+        if (moveCoroutine != null)
+        {
+            owner.StopCoroutine(moveCoroutine);
+            moveCoroutine = null;
+        }
+
+        isMoving = false;
     }
 }
