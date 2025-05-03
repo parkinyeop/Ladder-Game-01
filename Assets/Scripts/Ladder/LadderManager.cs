@@ -98,6 +98,7 @@ public class LadderManager : MonoBehaviour
             var txt = resultButton.GetComponentInChildren<Text>();
             if (txt != null)
                 txt.text = "READY";
+            resultButton.interactable = false;
         }
     }
 
@@ -132,8 +133,14 @@ public class LadderManager : MonoBehaviour
         generator.GenerateLadder(verticalCount, stepCount, horizontalLineCount, randomizeHorizontalLines);
         ResetAllGoalButtonColors();
 
+        // ✅ 보드 활성화 및 메시지 출력
         if (board != null) board.SetActive(true);
         if (boardText != null) boardText.text = "도착 지점을 선택하세요!";
+
+        // ✅ 배팅 금액이 0이면 결과 버튼 비활성화
+        int currentBet = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0;
+        resultButton.interactable = (currentBet > 0);
+
 
         // ✅ 결과 버튼 텍스트를 "READY"로 변경
         resultButton.GetComponentInChildren<Text>().text = "READY";
@@ -233,6 +240,19 @@ public class LadderManager : MonoBehaviour
 
         resultButton.interactable = true;
         resultButton.GetComponentInChildren<Text>().text = "READY"; // 버튼 상태 초기화
+    }
+
+    /// <summary>
+    /// 모든 골 버튼을 활성화 또는 비활성화
+    /// </summary>
+    public void SetGoalButtonsInteractable(bool isOn)
+    {
+        foreach (var btn in destinationButtons)
+        {
+            Button uiButton = btn.GetComponent<Button>();
+            if (uiButton != null)
+                uiButton.interactable = isOn;
+        }
     }
 
     /// <summary>
@@ -595,7 +615,25 @@ public class LadderManager : MonoBehaviour
     {
         Debug.Log($"💰 배팅 금액 확정됨: {betAmount}원");
 
+        // 금액이 0이면 결과 버튼 비활성화
+        if (betAmount <= 0)
+        {
+            resultButton.interactable = false;
+            if (boardText != null) boardText.text = "배팅 금액을 설정하세요!";
+            return;
+        }
+
+        // 금액이 1 이상이면 준비 상태로 전환
+        resultButton.interactable = true;
+        resultButton.GetComponentInChildren<Text>().text = "READY";
+
         // 예시: 확인 버튼 활성화, 로그 표시 등 필요한 로직 여기에 작성
         // resultButton.interactable = true;
+    }
+
+    public bool IsInReadyState()
+    {
+        var text = resultButton?.GetComponentInChildren<Text>();
+        return text != null && text.text == "READY";
     }
 }

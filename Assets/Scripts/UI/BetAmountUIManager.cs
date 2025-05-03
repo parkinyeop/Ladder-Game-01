@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -20,7 +21,17 @@ public class BetAmountUIManager : MonoBehaviour
     public Button bet50Button;
     public Button bet100Button;
 
+    public LadderManager ladderManager; // 인스펙터에서 연결 
+
+    private List<Button> betButtons = new(); // ✅ 버튼들을 관리할 리스트
+
+    private readonly Color highlightColor = new Color(0.2f, 0.8f, 1f);  // 하이라이트 색상 (하늘색)
+    private readonly Color defaultColor = Color.white;                  // 기본 색상
+
     public event Action<int> OnBetConfirmed;
+
+    [SerializeField] private Button resultButton;
+    //[SerializeField] private LadderManager ladderManager;
 
     private int betAmount = 0;            // 현재 선택된 배팅 금액 (기본값 1)
     private int currentBetAmount = 0; // ✅ 여기 추가
@@ -44,7 +55,8 @@ public class BetAmountUIManager : MonoBehaviour
         if (bet10Button != null) bet10Button.onClick.AddListener(() => SetBetAmount(10));
         if (bet50Button != null) bet50Button.onClick.AddListener(() => SetBetAmount(50));
         if (bet100Button != null) bet100Button.onClick.AddListener(() => SetBetAmount(100));
-
+        // ✅ 시작 시 배팅금액 0으로 설정
+        SetBetAmount(0);
         UpdateBetAmountText();
     }
 
@@ -78,11 +90,20 @@ public class BetAmountUIManager : MonoBehaviour
         // ✅ 슬라이더도 해당 값으로 이동시키되, 이벤트도 발생하게 둠
         if (betSlider != null && betSlider.value != amount)
         {
-            betSlider.value = amount;  // onValueChanged 자동 호출됨
+            betSlider.onValueChanged.RemoveListener(OnSliderValueChanged);
+            betSlider.value = amount;
+            betSlider.onValueChanged.AddListener(OnSliderValueChanged);
         }
 
-
         UpdateBetAmountText();
+
+        // ✅ 배팅 금액 1 이상이고 결과 버튼이 READY 상태일 때만 버튼 활성화
+        if (ladderManager != null && ladderManager.IsInReadyState())
+        {
+            bool shouldEnable = betAmount > 0;
+            ladderManager.resultButton.interactable = shouldEnable;
+            Debug.Log($"🟡 결과 버튼 활성화 여부: {shouldEnable}");
+        }
     }
 
     /// <summary>
@@ -100,7 +121,13 @@ public class BetAmountUIManager : MonoBehaviour
     {
         if (betAmountText != null)
             betAmountText.text = $"베팅: {betAmount} 코인";
+
+        // ✅ 조건에 따라 골 버튼 활성/비활성
+        if (ladderManager != null)
+           ladderManager.SetGoalButtonsInteractable(betAmount > 0);
     }
+
+
 
     // BetAmountUIManager.cs 안에 추가
     //public void OnBetConfirmed()
