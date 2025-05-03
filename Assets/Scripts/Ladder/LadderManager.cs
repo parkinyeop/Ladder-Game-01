@@ -27,6 +27,7 @@ public class LadderManager : MonoBehaviour
     [Header("보드 UI")]
     public GameObject board;               // 보드 패널
     public Text boardText;                // 보드 내 메시지 출력용 텍스트
+    public Text rewardText;
 
     [Header("세로/가로줄 수 조절 UI")]
     public Button increaseVerticalButton;
@@ -224,22 +225,46 @@ public class LadderManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 플레이어 도착 후 성공 여부 확인
+    /// 플레이어 도착 후 성공 여부 및 보상 계산
     /// </summary>
     private void CheckResult(int arrivedIndex)
     {
-        int selectedIndex = generator.GetSelectedDestination();
-        resultText.text = (arrivedIndex == selectedIndex) ? "🎉 성공!" : "❌ 실패!";
-        Debug.Log($"[결과] 도착 인덱스: {arrivedIndex}, 선택 인덱스: {selectedIndex}");
+        // 현재 골 인덱스 가져오기
+        int goalIndex = generator.GetSelectedDestination();
 
-        // ✅ 로그도 성공/실패에 따라 명확히 출력
-        if (arrivedIndex == selectedIndex)
-            Debug.Log("✅ 성공! 도착 지점이 선택한 골과 일치합니다.");
-        else
-            Debug.Log("❌ 실패! 도착 지점이 선택한 골과 다릅니다.");
+        // 배팅 금액 가져오기
+        int betAmount = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0;
 
+        // 골 배율 = 세로줄 수 (예: 3개 → 3X)
+        int goalMultiplier = verticalCount;
+
+        // 스타트 배율 = 세로줄 수 × 세로줄 수 (예: 3개 → 9X)
+        int startMultiplier = verticalCount * verticalCount;
+
+        // 스타트 버튼이 선택되었으면 그 배율, 아니면 골 배율을 적용
+        int finalMultiplier = selectedStartIndex >= 0 ? startMultiplier : goalMultiplier;
+
+        // 최종 보상 금액 계산
+        int reward = betAmount * finalMultiplier;
+
+        // 성공 여부 판단
+        bool isSuccess = arrivedIndex == goalIndex;
+
+        // 로그 출력 (디버그용)
+        Debug.Log($"🎯 도착 인덱스: {arrivedIndex}, 목표 인덱스: {goalIndex}");
+        Debug.Log($"✅ 배팅 금액: {betAmount} 코인");
+        Debug.Log($"✅ 적용 배율: {finalMultiplier}X");
+        Debug.Log($"💰 최종 보상: {reward} 코인");
+        Debug.Log(isSuccess ? "🎉 성공!" : "❌ 실패!");
+
+        // 결과 텍스트 업데이트
+        resultText.text = isSuccess
+            ? $"🎉 성공! 보상 {reward}코인"
+            : $"❌ 실패! 보상 {reward}코인";
+
+        // 결과 버튼 재활성화 및 텍스트 초기화
         resultButton.interactable = true;
-        resultButton.GetComponentInChildren<Text>().text = "READY"; // 버튼 상태 초기화
+        resultButton.GetComponentInChildren<Text>().text = "READY";
     }
 
     /// <summary>
@@ -266,7 +291,6 @@ public class LadderManager : MonoBehaviour
     public void HighlightSelectedGoalButton(GoalBettingButton clickedButton)
     {
         // 이미 선택된 버튼을 다시 클릭한 경우 → 선택 해제
-        // 이미 선택된 버튼 다시 클릭 → 처리 생략 (또는 해제 로직 추가 가능)
         if (selectedGoalButton == clickedButton)
             return;
 
@@ -284,8 +308,6 @@ public class LadderManager : MonoBehaviour
 
         resultButton.interactable = true; // ⭐ 골 선택 시 GO 버튼 활성화
 
-
-
         // 이전 선택된 버튼 색상 복원
         selectedGoalButton?.ResetColor();
 
@@ -299,6 +321,21 @@ public class LadderManager : MonoBehaviour
 
         // ✅ 골 버튼 선택되었으므로 스타트 버튼들 활성화
         SetStartButtonsInteractable(true);
+
+        // ✅ 골버튼이 선택된 후 스타트 버튼 배율 업데이트
+        UpdateStartButtonMultiplierTexts();
+
+        // ✅ 기대값 출력 보드 텍스트 업데이트
+        if (boardText != null && betAmountUIManager != null)
+        {
+            int betAmount = betAmountUIManager.GetBetAmount();            // 현재 배팅 코인
+            int goalMultiplier = verticalCount;                           // 골 버튼 배율 = 세로줄 수
+            int expectedReward = betAmount * goalMultiplier;
+
+            boardText.text = $"도착 지점을 선택하세요!\n기대값: {expectedReward} 코인";
+            Debug.Log($"🧮 기대값 계산됨: 배팅 {betAmount} × 배율 {goalMultiplier} = {expectedReward}");
+        }
+
     }
 
     public void OnResultButtonPressed()
@@ -498,6 +535,19 @@ public class LadderManager : MonoBehaviour
 
         DimOtherStartButtons(selectedButton);
         selectedStartButton = selectedButton;
+
+        // ✅ 기대값 갱신 (배팅 금액 × 스타트 버튼 배율)
+        if (boardText != null && betAmountUIManager != null)
+        {
+            int betAmount = betAmountUIManager.GetBetAmount();   // 현재 배팅 금액
+            int verticalCount = this.verticalCount;              // 세로줄 수
+            int startMultiplier = verticalCount * verticalCount; // 스타트 배율 = 세로줄 * 세로줄
+
+            int expectedReward = betAmount * startMultiplier;
+
+            // 기존 메시지 유지 + 기대값 추가
+            boardText.text = $"도착 지점을 선택하세요!\n기대값: {expectedReward} 코인";
+        }
     }
 
     private void DimOtherStartButtons(StartBettingButton selectedButton)
@@ -542,27 +592,34 @@ public class LadderManager : MonoBehaviour
         {
             // 정확한 X 위치 계산 (실측 ladderWidth 사용)
             float x = LadderLayoutHelper.GetXPosition(i, actualLadderWidth, verticalCount);
-            //Debug.log($"🟢 스타트 버튼 index={i}, x={x}");
 
+            // 프리팹 인스턴스화 및 부모 설정
             GameObject startButtonGO = Instantiate(startButtonPrefab, startButtonsParent);
             RectTransform rect = startButtonGO.GetComponent<RectTransform>();
 
-            // anchor 및 pivot 설정 (중앙 기준)
+            // 중앙 기준 위치 정렬
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-
             rect.anchoredPosition = new Vector2(x, buttonY);
 
-            // 버튼 스크립트 설정
+            // 버튼 스크립트 및 인덱스 설정
             StartBettingButton btn = startButtonGO.GetComponent<StartBettingButton>();
             btn.startIndex = i;
             startButtons.Add(btn);
 
-            // 텍스트 라벨 설정
+            // ✅ 스타트 버튼 배율 계산
+            // - 골버튼 배율은 세로줄 개수 (예: 3줄 → 3X)
+            // - 스타트 버튼은 (세로줄 개수 * 세로줄 개수) 배율로 표시 (예: 3x3 = 9X)
+            int multiplier = verticalCount * verticalCount;
+
+            // 텍스트 UI 찾아 배율 출력 (예: "9X")
             Text label = startButtonGO.GetComponentInChildren<Text>();
             if (label != null)
-                label.text = $"S{i + 1}";
+            {
+                int rewardMultiplier = verticalCount * verticalCount;
+                label.text = $"{rewardMultiplier}X"; // ✅ 예: "25X"
+            }
         }
     }
 
@@ -635,5 +692,31 @@ public class LadderManager : MonoBehaviour
     {
         var text = resultButton?.GetComponentInChildren<Text>();
         return text != null && text.text == "READY";
+    }
+
+    public void SetMultiplierText(int verticalCount)
+    {
+        Text multiplierText = GetComponentInChildren<Text>();
+        if (multiplierText != null)
+        {
+            int multiplier = verticalCount * verticalCount;
+            multiplierText.text = $"{multiplier}X";
+        }
+    }
+
+    private void UpdateStartButtonMultiplierTexts()
+    {
+        int goalMultiplier = verticalCount; // 골 버튼 배당률 = 세로줄 수
+
+        int finalMultiplier = verticalCount * goalMultiplier; // 스타트 배당 = 세로줄^2
+
+        foreach (var btn in startButtons)
+        {
+            Text label = btn.GetComponentInChildren<Text>();
+            if (label != null)
+            {
+                label.text = $"{finalMultiplier}X"; // ✅ 예: 25X
+            }
+        }
     }
 }
