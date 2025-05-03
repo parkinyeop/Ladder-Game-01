@@ -150,6 +150,9 @@ public class LadderManager : MonoBehaviour
         resultButton.interactable = false;
 
         SetStartButtonsInteractable(false);
+
+        if (rewardText != null)
+            rewardText.gameObject.SetActive(false);
     }
 
     /// <summary>
@@ -222,6 +225,7 @@ public class LadderManager : MonoBehaviour
 
         // 버튼 비활성화 → 도착 후 다시 활성화
         resultButton.interactable = false;
+
     }
 
     /// <summary>
@@ -265,6 +269,7 @@ public class LadderManager : MonoBehaviour
         // 결과 버튼 재활성화 및 텍스트 초기화
         resultButton.interactable = true;
         resultButton.GetComponentInChildren<Text>().text = "READY";
+
     }
 
     /// <summary>
@@ -331,26 +336,20 @@ public class LadderManager : MonoBehaviour
             int betAmount = betAmountUIManager.GetBetAmount();            // 현재 배팅 코인
             int goalMultiplier = verticalCount;                           // 골 버튼 배율 = 세로줄 수
             int expectedReward = betAmount * goalMultiplier;
-
-            boardText.text = $"도착 지점을 선택하세요!\n기대값: {expectedReward} 코인";
-            Debug.Log($"🧮 기대값 계산됨: 배팅 {betAmount} × 배율 {goalMultiplier} = {expectedReward}");
+            if (rewardText != null)
+            {
+                rewardText.gameObject.SetActive(true); // ✅ 보이기
+                rewardText.text = $"기대값: {expectedReward} 코인";
+            }
+            boardText.text = $"도착 지점을 선택하세요!";
         }
+
 
     }
 
     public void OnResultButtonPressed()
     {
-        //string label = resultButton.GetComponentInChildren<Text>().text;
-
-        //if (label == "READY")
-        //{
-        //    GenerateLadder(); // ✅ 사다리 생성 모드
-        //}
-        //else if (label == "GO")
-        //{
-        //    OnResultButtonClicked(); // ✅ 결과 실행
-        //}
-
+        
         string label = resultButton.GetComponentInChildren<Text>().text;
 
         if (label == "READY")
@@ -366,6 +365,10 @@ public class LadderManager : MonoBehaviour
                 if (boardText != null) boardText.text = "도착 지점을 선택하세요!";
                 return;
             }
+
+            // 결과 실행 전 기대값 텍스트 숨기기
+            if (rewardText != null)
+                rewardText.gameObject.SetActive(false);
 
             // 결과 실행
             OnResultButtonClicked();
@@ -546,7 +549,12 @@ public class LadderManager : MonoBehaviour
             int expectedReward = betAmount * startMultiplier;
 
             // 기존 메시지 유지 + 기대값 추가
-            boardText.text = $"도착 지점을 선택하세요!\n기대값: {expectedReward} 코인";
+            boardText.text = $"도착 지점을 선택하세요!";
+            if (rewardText != null)
+            {
+                rewardText.gameObject.SetActive(true); // ✅ 보이기
+                rewardText.text = $"기대값: {expectedReward} 코인";
+            }
         }
     }
 
