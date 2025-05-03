@@ -178,10 +178,10 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 18
+    m_FontSize: 42
     m_FontStyle: 1
     m_BestFit: 0
-    m_MinSize: 10
+    m_MinSize: 0
     m_MaxSize: 62
     m_Alignment: 4
     m_AlignByGeometry: 0
@@ -2576,7 +2576,7 @@ RectTransform:
   m_GameObject: {fileID: 1996828587}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1.2125, y: 4.95, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 132020328}
@@ -2585,7 +2585,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 678, y: -303}
-  m_SizeDelta: {x: 160, y: 30}
+  m_SizeDelta: {x: 300, y: 120}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2022045315
 GameObject:
@@ -2972,6 +2972,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: BetAmountPanel
       objectReference: {fileID: 0}
+    - target: {fileID: 7546850245700216451, guid: a2a60f4c131284becbc37bc32ef61754, type: 3}
+      propertyPath: m_FontData.m_FontSize
+      value: 35
+      objectReference: {fileID: 0}
     - target: {fileID: 7569405918730540560, guid: a2a60f4c131284becbc37bc32ef61754, type: 3}
       propertyPath: m_Pivot.x
       value: 0
@@ -3051,6 +3055,22 @@ PrefabInstance:
     - target: {fileID: 7569405918730540560, guid: a2a60f4c131284becbc37bc32ef61754, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169198160459022307, guid: a2a60f4c131284becbc37bc32ef61754, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 400
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169198160459022307, guid: a2a60f4c131284becbc37bc32ef61754, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 37
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169198160459022307, guid: a2a60f4c131284becbc37bc32ef61754, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -8.7197
+      objectReference: {fileID: 0}
+    - target: {fileID: 8169198160459022307, guid: a2a60f4c131284becbc37bc32ef61754, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 54.35
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
