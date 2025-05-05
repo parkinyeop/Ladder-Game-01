@@ -48,17 +48,22 @@ public class ResultUIManager : MonoBehaviour
 
     public void OnCloseResult()
     {
-        // 결과 패널 비활성화
-        Hide();
+        // ✅ 결과창 숨기기
+        resultPanel.SetActive(false);
 
-        //ladderManager.GenerateLadder();
-
-        // ✅ 다음 라운드용 사다리 자동 생성
+        // ✅ 사다리 매니저가 연결되어 있는지 확인
         if (ladderManager != null)
         {
             Debug.Log("🟢 OnCloseResult(): GenerateLadder 호출됨");
+
+            // 🔄 사다리 다시 생성 (다음 라운드 시작)
             ladderManager.GenerateLadder();
-            ladderManager.SetResultButtonState("GO");
+
+            // ✅ 배팅 UI 다시 활성화
+            if (ladderManager.betAmountUIManager != null)
+            {
+                ladderManager.betAmountUIManager.SetInteractable(true);
+            }
         }
         else
         {
