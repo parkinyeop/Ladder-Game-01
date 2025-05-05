@@ -60,7 +60,11 @@ public class LadderManager : MonoBehaviour
     [Header("플레이어 관련")]
     public GameObject playerPrefab;             // 이동할 플레이어 프리팹
     public Transform playerTransform;           // 생성된 플레이어의 Transform 참조
-        
+
+    [Header("코인 관련")]
+    public float currentCoin = 100; // 기본 보유 코인
+    public Text coinTextUI;       // 인스펙터에서 연결할 텍스트 오브젝트
+
     private LadderGenerator generator;          // 사다리 생성기
     private PlayerMover playerMover;            // 플레이어 이동기
     private GameObject spawnedPlayer;           // 현재 생성된 플레이어 오브젝트
@@ -113,6 +117,8 @@ public class LadderManager : MonoBehaviour
                 txt.text = "READY";
             resultButton.interactable = false;
         }
+
+        UpdateCoinUI(); // 시작 시 보유 코인 텍스트 표시
     }
 
     private void OnBetAmountConfirmed(int amount)
@@ -271,21 +277,10 @@ public class LadderManager : MonoBehaviour
 
         // ✅ 최종 보상 계산
         float reward = betAmount * finalMultiplier;
+        int roundedReward = Mathf.FloorToInt(reward); // 정수로 처리
 
         // ✅ 성공 여부 판단 (도착 인덱스와 골 인덱스 일치 여부)
         bool isSuccess = arrivedIndex == goalIndex;
-
-        // ✅ 디버그 로그 출력 (보상 정보 포함)
-        Debug.Log($"🎯 도착 인덱스: {arrivedIndex}, 목표 인덱스: {goalIndex}");
-        Debug.Log($"✅ 배팅 금액: {betAmount} 코인");
-        Debug.Log($"✅ 적용 배율: {finalMultiplier:F1}X");
-        Debug.Log($"💰 최종 보상: {reward:F1} 코인");
-        Debug.Log(isSuccess ? "🎉 성공!" : "❌ 실패!");
-
-        // ✅ 결과 UI 텍스트 업데이트 (이전 방식: resultText)
-        // resultText.text = isSuccess
-        //     ? $"🎉 성공! 보상 {reward:F1}코인"
-        //     : $"❌ 실패! 보상 {reward:F1}코인";
 
         // ✅ 새 방식: ResultUIManager 통해 결과 패널 표시
         if (resultUIManager != null)
@@ -293,8 +288,18 @@ public class LadderManager : MonoBehaviour
             if (!isSuccess)
                 reward = 0f; // ⛔ 실패 시 보상은 0
 
-            string message = isSuccess ? $"🎉 성공! 보상 {reward}코인" : $"❌ 실패! 다시 도전해주세요";
+            string message = isSuccess ? $"🎉 성공! 보상 {reward}코인" : $"❌ 실패! 다시 도전해주세";
             resultUIManager.ShowResult(message); // ✅ 결과창 호출
+
+            // ✅ 보유 코인 업데이트
+            if (isSuccess)
+            {
+                AddCoin(roundedReward); // 보상 지급
+            }
+            else
+            {
+                AddCoin(-Mathf.FloorToInt(betAmount)); // 배팅 금액만큼 차감
+            }
         }
 
         // ✅ 결과 버튼 다시 활성화 및 텍스트 복구
@@ -846,5 +851,32 @@ public class LadderManager : MonoBehaviour
             // "READY" 상태가 아니면 버튼도 비활성화
             resultButton.interactable = (state == "READY" || state == "GO");
         }
+    }
+
+    /// <summary>
+    /// 보유 코인을 설정하고 UI 갱신
+    /// </summary>
+    public void SetCoin(float amount)
+    {
+        currentCoin = Mathf.Max(0, amount); // 음수 방지
+        UpdateCoinUI();
+    }
+
+    /// <summary>
+    /// 보유 코인을 증가 또는 감소시키고 UI 갱신
+    /// </summary>
+    public void AddCoin(float amount)
+    {
+        currentCoin = Mathf.Max(0, currentCoin + amount); // 음수 방지
+        UpdateCoinUI();
+    }
+
+    /// <summary>
+    /// 보유 코인 텍스트 UI 업데이트
+    /// </summary>
+    private void UpdateCoinUI()
+    {
+        if (coinTextUI != null)
+            coinTextUI.text = $"코인: {currentCoin:F1}";
     }
 }
