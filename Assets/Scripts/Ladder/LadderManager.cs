@@ -34,6 +34,9 @@ public class LadderManager : MonoBehaviour
     public Text boardText;                // 보드 내 메시지 출력용 텍스트
     public Text rewardText;
 
+    [Header("결과 처리 UI")]
+    public ResultUIManager resultUIManager; // 결과 처리 통합 관리자
+
     [Header("세로/가로줄 수 조절 UI")]
     public Button increaseVerticalButton;
     public Button decreaseVerticalButton;
@@ -57,7 +60,7 @@ public class LadderManager : MonoBehaviour
     [Header("플레이어 관련")]
     public GameObject playerPrefab;             // 이동할 플레이어 프리팹
     public Transform playerTransform;           // 생성된 플레이어의 Transform 참조
-
+        
     private LadderGenerator generator;          // 사다리 생성기
     private PlayerMover playerMover;            // 플레이어 이동기
     private GameObject spawnedPlayer;           // 현재 생성된 플레이어 오브젝트
@@ -80,6 +83,10 @@ public class LadderManager : MonoBehaviour
     {
         generator = new LadderGenerator(this);
         playerMover = new PlayerMover(this);
+
+        // 시작 시 결과창 숨김
+        if (resultUIManager != null)
+            resultUIManager.Hide(); // resultPanel은 내부에서 관리
 
         if (betAmountUIManager != null)
         {
@@ -162,6 +169,10 @@ public class LadderManager : MonoBehaviour
         // GenerateLadder() 끝 부분에 추가
         if (betAmountUIManager != null)
             betAmountUIManager.SetInteractable(false); // 🔒 사다리 생성 후 배팅 비활성화
+
+        // ✅ 결과창 숨김 처리
+        if (resultUIManager != null)
+            resultUIManager.Hide();
     }
 
     /// <summary>
@@ -237,47 +248,77 @@ public class LadderManager : MonoBehaviour
             rewardText.gameObject.SetActive(false);
     }
 
-
     /// <summary>
-/// 플레이어 도착 후 결과 처리
-/// - 성공 여부 판단 및 최종 보상 계산
-/// </summary>
-private void CheckResult(int arrivedIndex)
-{
-    int goalIndex = generator.GetSelectedDestination();
-    int betAmount = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0;
+    /// 플레이어 도착 후 성공 여부 판단 및 보상 처리
+    /// </summary>
+    private void CheckResult(int arrivedIndex)
+    {
+        // ✅ 도착 목표 인덱스 확인 (골버튼 선택된 인덱스)
+        int goalIndex = generator.GetSelectedDestination();
 
-    // 🔢 배율 계산 (float로 처리)
-    float goalMultiplier = verticalCount * goalMultiplierFactor;
-    float startMultiplier = verticalCount * startMultiplierFactor;
+        // ✅ 배팅 금액 가져오기
+        float betAmount = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0f;
 
-    // ✅ 수동 선택 시 스타트 배율, 랜덤 시 골 배율 적용
-    float finalMultiplier = selectedStartIndex >= 0 ? startMultiplier : goalMultiplier;
+        // ✅ 배율 계산 (세로줄 개수 × 설정된 배율 팩터)
+        float goalMultiplier = verticalCount * goalMultiplierFactor;                   // 예: 3줄 × 0.9 = 2.7
+        float startMultiplier = verticalCount * verticalCount * startMultiplierFactor; // 예: 3줄 × 3줄 × 0.9 = 8.1
 
-    float reward = betAmount * finalMultiplier;
-    bool isSuccess = arrivedIndex == goalIndex;
+        // ✅ 사용자가 스타트 버튼을 선택했는지 여부 판단
+        bool hasSelectedStart = selectedStartIndex >= 0;
 
-    if (betAmountUIManager != null)
-        betAmountUIManager.SetInteractable(true); // 배팅 UI 재활성화
+        // ✅ 최종 배율 결정: 스타트 버튼 선택 여부에 따라
+        float finalMultiplier = hasSelectedStart ? startMultiplier : goalMultiplier;
 
-    if (rewardText != null)
-        rewardText.gameObject.SetActive(false); // 기대값 텍스트 숨김
+        // ✅ 최종 보상 계산
+        float reward = betAmount * finalMultiplier;
 
-    // 로그 출력
-    Debug.Log($"🎯 도착 인덱스: {arrivedIndex}, 목표 인덱스: {goalIndex}");
-    Debug.Log($"✅ 배팅 금액: {betAmount} 코인");
-    Debug.Log($"✅ 적용 배율: {finalMultiplier:0.0}X");
-    Debug.Log($"💰 최종 보상: {reward:0.0} 코인");
-    Debug.Log(isSuccess ? "🎉 성공!" : "❌ 실패!");
+        // ✅ 성공 여부 판단 (도착 인덱스와 골 인덱스 일치 여부)
+        bool isSuccess = arrivedIndex == goalIndex;
 
-    // 결과 텍스트 출력
-    resultText.text = isSuccess
-        ? $"🎉 성공! 보상 {reward:0.0}코인"
-        : $"❌ 실패! 보상 {reward:0.0}코인";
+        // ✅ 디버그 로그 출력 (보상 정보 포함)
+        Debug.Log($"🎯 도착 인덱스: {arrivedIndex}, 목표 인덱스: {goalIndex}");
+        Debug.Log($"✅ 배팅 금액: {betAmount} 코인");
+        Debug.Log($"✅ 적용 배율: {finalMultiplier:F1}X");
+        Debug.Log($"💰 최종 보상: {reward:F1} 코인");
+        Debug.Log(isSuccess ? "🎉 성공!" : "❌ 실패!");
 
-    resultButton.interactable = true;
-    resultButton.GetComponentInChildren<Text>().text = "READY";
-}
+        // ✅ 결과 UI 텍스트 업데이트 (이전 방식: resultText)
+        // resultText.text = isSuccess
+        //     ? $"🎉 성공! 보상 {reward:F1}코인"
+        //     : $"❌ 실패! 보상 {reward:F1}코인";
+
+        // ✅ 새 방식: ResultUIManager 통해 결과 패널 표시
+        if (resultUIManager != null)
+        {
+            if (!isSuccess)
+                reward = 0f; // ⛔ 실패 시 보상은 0
+
+            string message = isSuccess ? $"🎉 성공! 보상 {reward}코인" : $"❌ 실패! 다시 도전해주세요";
+            resultUIManager.ShowResult(message); // ✅ 결과창 호출
+        }
+
+        // ✅ 결과 버튼 다시 활성화 및 텍스트 복구
+        resultButton.interactable = true;
+        resultButton.GetComponentInChildren<Text>().text = "READY";
+
+        // ✅ 다음 라운드를 위해 배팅 UI 다시 활성화
+        if (betAmountUIManager != null)
+        {
+            betAmountUIManager.SetInteractable(true);
+        }
+
+        // ✅ 기대값 텍스트는 비활성화
+        if (rewardText != null)
+        {
+            rewardText.gameObject.SetActive(false);
+        }
+    }
+
+    //private void HideResultUI()
+    //{
+    //    if (successUI != null) successUI.SetActive(false);
+    //    if (failUI != null) failUI.SetActive(false);
+    //}
 
     /// <summary>
     /// 모든 골 버튼을 활성화 또는 비활성화
@@ -395,6 +436,8 @@ private void CheckResult(int arrivedIndex)
 
             // 결과 실행
             OnResultButtonClicked();
+
+            resultButton.GetComponentInChildren<Text>().text = "WAIT"; // ✅ 다음 라운드까지 대기
 
             // 완료 후 버튼을 다시 READY로 되돌리기
             resultButton.GetComponentInChildren<Text>().text = "READY";
@@ -791,6 +834,17 @@ private void CheckResult(int arrivedIndex)
             {
                 label.text = $"{multiplier:F1}X";
             }
+        }
+    }
+
+    public void SetResultButtonState(string state)
+    {
+        if (resultButton != null)
+        {
+            resultButton.GetComponentInChildren<Text>().text = state;
+
+            // "READY" 상태가 아니면 버튼도 비활성화
+            resultButton.interactable = (state == "READY" || state == "GO");
         }
     }
 }
