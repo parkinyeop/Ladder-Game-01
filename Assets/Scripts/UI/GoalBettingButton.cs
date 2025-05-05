@@ -42,7 +42,14 @@ public class GoalBettingButton : MonoBehaviour
     public void Highlight()
     {
         if (button != null && button.targetGraphic != null)
-            button.targetGraphic.color = HighlightColor;
+            button.targetGraphic.color = Color.yellow;
+    }
+
+    // ✅ 특정 색상으로 강조할 수 있는 함수 추가
+    public void HighlightWithColor(Color color)
+    {
+        if (button != null && button.targetGraphic != null)
+            button.targetGraphic.color = color;
     }
 
     public void Dim()
@@ -53,16 +60,27 @@ public class GoalBettingButton : MonoBehaviour
 
     public void ResetColor()
     {
-        if (button != null && button.targetGraphic != null)
-            button.targetGraphic.color = DefaultColor;
+        if (GetComponent<Button>()?.targetGraphic != null)
+        {
+            GetComponent<Button>().targetGraphic.color = Color.white; // 기본 색상으로 복원
+        }
+
+        // 텍스트도 다시 보이게
+        SetTextVisible(true);
     }
 
-    /// <summary>
-    /// 배당률 텍스트 설정 (예: 2X, 3X 등)
-    /// </summary>
-    public void SetMultiplierText(int multiplier)
+    public void SetMultiplierText(float multiplier)
     {
-        if (multiplierText != null)
-            multiplierText.text = $"{multiplier}X";
+        Text label = GetComponentInChildren<Text>();
+        if (label != null)
+            label.text = $"{multiplier:F1}X"; // 소수점 1자리로 출력
     }
+       
+    public void SetTextVisible(bool isVisible)
+    {
+        Text label = GetComponentInChildren<Text>();
+        if (label != null)
+            label.enabled = isVisible;
+    }
+
 }

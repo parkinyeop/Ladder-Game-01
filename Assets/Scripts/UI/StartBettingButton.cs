@@ -12,6 +12,8 @@ public class StartBettingButton : MonoBehaviour
     public int startIndex; // 이 버튼이 담당하는 출발 인덱스
 
     private Button button;
+    private Image targetImage;
+
     private LadderManager ladderManager;
 
     // 색상 정의
@@ -22,6 +24,8 @@ public class StartBettingButton : MonoBehaviour
     private void Start()
     {
         button = GetComponent<Button>();
+        targetImage = GetComponent<Image>(); // ✅ 이 줄을 추가해야 색상이 적용됩니다
+
         ladderManager = FindObjectOfType<LadderManager>();
 
         if (button != null)
@@ -48,7 +52,16 @@ public class StartBettingButton : MonoBehaviour
     public void Highlight()
     {
         if (button != null && button.targetGraphic != null)
-            button.targetGraphic.color = HighlightColor;
+            button.targetGraphic.color = Color.yellow;
+    }
+
+    /// <summary>
+    /// 특정 색상으로 버튼 하이라이트
+    /// </summary>
+    public void HighlightWithColor(Color color)
+    {
+        if (button != null && button.targetGraphic != null)
+            button.targetGraphic.color = color;
     }
 
     public void Dim()

@@ -9,6 +9,11 @@ using System.Collections.Generic;
 /// </summary>
 public class LadderManager : MonoBehaviour
 {
+    [Header("배당 설정")]
+    [Tooltip("골/스타트 배율 결정에 곱해지는 계수 (예: 0.5이면 2줄 × 0.5 = 1X)")]
+    public float goalMultiplierFactor = 0.5f;
+    public float startMultiplierFactor = 1.0f; // 필요시 따로 분리
+
     [Header("사다리 설정")]
     public int verticalCount = 3;               // 세로줄 개수
     public int stepCount = 10;                  // 사다리 층 수
@@ -153,38 +158,52 @@ public class LadderManager : MonoBehaviour
 
         if (rewardText != null)
             rewardText.gameObject.SetActive(false);
+
+        // GenerateLadder() 끝 부분에 추가
+        if (betAmountUIManager != null)
+            betAmountUIManager.SetInteractable(false); // 🔒 사다리 생성 후 배팅 비활성화
     }
 
     /// <summary>
-    /// 결과 버튼 클릭 시 처리
-    /// - 골 선택 여부 확인, 플레이어 생성 및 이동 실행
+    /// 결과 버튼(GO) 클릭 시 실행
+    /// - 플레이어 생성 및 이동 시작
     /// </summary>
     public void OnResultButtonClicked()
     {
-        // 이미 이동 중이면 무시
         if (playerMover.IsMoving())
             return;
 
         if (selectedGoalButton == null)
         {
-            // ✅ 보드에 안내 메시지 출력
             if (boardText != null) boardText.text = "도착 지점을 선택하세요!";
             return;
         }
 
-        // ✅ 보드 비활성화
         if (board != null) board.SetActive(false);
 
-        // 스타트 버튼이 선택된 경우 해당 인덱스, 아니면 무작위 인덱스 사용
-        int startIndex = selectedStartIndex >= 0 ? selectedStartIndex : Random.Range(0, verticalCount);
+        // ⭐ startIndex를 여기에 정의해야 함!
+        int startIndex = selectedStartIndex >= 0
+            ? selectedStartIndex
+            : Random.Range(0, verticalCount);
 
-        // ⭐ 랜덤일 경우에도 하이라이트 적용
-        if (selectedStartIndex < 0 && startIndex >= 0 && startIndex < startButtons.Count)
+        // ⭐ 스타트 버튼 텍스트 초기화
+        foreach (var btn in startButtons)
         {
-            HighlightSelectedStartButton(startButtons[startIndex]);
+            Text label = btn.GetComponentInChildren<Text>();
+            if (label != null) label.text = "";
         }
 
-        // 이전 플레이어가 존재하면 제거
+        // ✅ 모든 버튼 색상 초기화 (이후 강조할 버튼은 따로 처리)
+        ResetAllStartButtonColors();
+
+        // ⭐ 랜덤 선택인 경우 강조 적용
+        if (selectedStartIndex < 0 && startIndex >= 0 && startIndex < startButtons.Count)
+        {
+            selectedStartButton = startButtons[startIndex];
+            selectedStartButton.HighlightWithColor(Color.yellow); // ✅ 노란색으로 강조
+        }
+
+        // 기존 플레이어 제거
         if (playerTransform != null)
         {
             playerMover.StopMove(this);
@@ -192,85 +211,73 @@ public class LadderManager : MonoBehaviour
             playerTransform = null;
         }
 
-        // 프리팹이 연결되지 않은 경우 에러
-        if (playerPrefab == null)
-        {
-            //Debug.logError("[LadderManager] Player 프리팹이 연결되지 않았습니다.");
-            return;
-        }
+        // 플레이어 프리팹 생성
+        if (playerPrefab == null) return;
 
-        // 새로운 플레이어 생성
         GameObject playerGO = Instantiate(playerPrefab, ladderRoot);
         playerTransform = playerGO.transform;
 
-        // 플레이어 위치 계산 (UI 기준 anchoredPosition)
         float x = LadderLayoutHelper.GetXPosition(startIndex, ladderWidth, verticalCount);
         float y = LadderLayoutHelper.GetStartY(stepCount, stepHeight);
-
-        // 위치 지정 (RectTransform 기준)
         RectTransform rect = playerTransform.GetComponent<RectTransform>();
+
         if (rect != null)
-        {
             rect.anchoredPosition = new Vector2(x, y);
-        }
-        else
-        {
-            //Debug.logError("[LadderManager] Player에 RectTransform이 없습니다.");
-        }
 
         // 이동 세팅 및 실행
-        playerMover.Setup(playerTransform, startIndex, 500f);      // 위치, 속도 설정
-        playerMover.SetFinishCallback(CheckResult);                // 도착 후 결과 체크 콜백
-        playerMover.StartMove(this);                               // 코루틴으로 이동 시작
+        playerMover.Setup(playerTransform, startIndex, 500f);
+        playerMover.SetFinishCallback(CheckResult);
+        playerMover.StartMove(this);
 
-        // 버튼 비활성화 → 도착 후 다시 활성화
+        // 결과 버튼 비활성화
         resultButton.interactable = false;
 
+        // ✅ 기대값 텍스트 숨김
+        if (rewardText != null)
+            rewardText.gameObject.SetActive(false);
     }
+
 
     /// <summary>
-    /// 플레이어 도착 후 성공 여부 및 보상 계산
-    /// </summary>
-    private void CheckResult(int arrivedIndex)
-    {
-        // 현재 골 인덱스 가져오기
-        int goalIndex = generator.GetSelectedDestination();
+/// 플레이어 도착 후 결과 처리
+/// - 성공 여부 판단 및 최종 보상 계산
+/// </summary>
+private void CheckResult(int arrivedIndex)
+{
+    int goalIndex = generator.GetSelectedDestination();
+    int betAmount = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0;
 
-        // 배팅 금액 가져오기
-        int betAmount = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0;
+    // 🔢 배율 계산 (float로 처리)
+    float goalMultiplier = verticalCount * goalMultiplierFactor;
+    float startMultiplier = verticalCount * startMultiplierFactor;
 
-        // 골 배율 = 세로줄 수 (예: 3개 → 3X)
-        int goalMultiplier = verticalCount;
+    // ✅ 수동 선택 시 스타트 배율, 랜덤 시 골 배율 적용
+    float finalMultiplier = selectedStartIndex >= 0 ? startMultiplier : goalMultiplier;
 
-        // 스타트 배율 = 세로줄 수 × 세로줄 수 (예: 3개 → 9X)
-        int startMultiplier = verticalCount * verticalCount;
+    float reward = betAmount * finalMultiplier;
+    bool isSuccess = arrivedIndex == goalIndex;
 
-        // 스타트 버튼이 선택되었으면 그 배율, 아니면 골 배율을 적용
-        int finalMultiplier = selectedStartIndex >= 0 ? startMultiplier : goalMultiplier;
+    if (betAmountUIManager != null)
+        betAmountUIManager.SetInteractable(true); // 배팅 UI 재활성화
 
-        // 최종 보상 금액 계산
-        int reward = betAmount * finalMultiplier;
+    if (rewardText != null)
+        rewardText.gameObject.SetActive(false); // 기대값 텍스트 숨김
 
-        // 성공 여부 판단
-        bool isSuccess = arrivedIndex == goalIndex;
+    // 로그 출력
+    Debug.Log($"🎯 도착 인덱스: {arrivedIndex}, 목표 인덱스: {goalIndex}");
+    Debug.Log($"✅ 배팅 금액: {betAmount} 코인");
+    Debug.Log($"✅ 적용 배율: {finalMultiplier:0.0}X");
+    Debug.Log($"💰 최종 보상: {reward:0.0} 코인");
+    Debug.Log(isSuccess ? "🎉 성공!" : "❌ 실패!");
 
-        // 로그 출력 (디버그용)
-        Debug.Log($"🎯 도착 인덱스: {arrivedIndex}, 목표 인덱스: {goalIndex}");
-        Debug.Log($"✅ 배팅 금액: {betAmount} 코인");
-        Debug.Log($"✅ 적용 배율: {finalMultiplier}X");
-        Debug.Log($"💰 최종 보상: {reward} 코인");
-        Debug.Log(isSuccess ? "🎉 성공!" : "❌ 실패!");
+    // 결과 텍스트 출력
+    resultText.text = isSuccess
+        ? $"🎉 성공! 보상 {reward:0.0}코인"
+        : $"❌ 실패! 보상 {reward:0.0}코인";
 
-        // 결과 텍스트 업데이트
-        resultText.text = isSuccess
-            ? $"🎉 성공! 보상 {reward}코인"
-            : $"❌ 실패! 보상 {reward}코인";
-
-        // 결과 버튼 재활성화 및 텍스트 초기화
-        resultButton.interactable = true;
-        resultButton.GetComponentInChildren<Text>().text = "READY";
-
-    }
+    resultButton.interactable = true;
+    resultButton.GetComponentInChildren<Text>().text = "READY";
+}
 
     /// <summary>
     /// 모든 골 버튼을 활성화 또는 비활성화
@@ -293,58 +300,74 @@ public class LadderManager : MonoBehaviour
         generator.SetSelectedDestination(index);
     }
 
+    /// <summary>
+    /// 골 버튼 클릭 시 처리 함수
+    /// - 강조 색상 적용 및 Dim 처리
+    /// - 텍스트 숨김/표시
+    /// - 기대값 텍스트 갱신
+    /// </summary>
     public void HighlightSelectedGoalButton(GoalBettingButton clickedButton)
     {
-        // 이미 선택된 버튼을 다시 클릭한 경우 → 선택 해제
+        // ✅ 같은 버튼을 다시 클릭한 경우 → 선택 해제
         if (selectedGoalButton == clickedButton)
-            return;
-
-        selectedGoalButton?.ResetColor();
-        clickedButton.Highlight();
-        DimOtherGoalButtons(clickedButton);
-        selectedGoalButton = clickedButton;
-
-        SetStartButtonsInteractable(true); // ⭐ 골 선택 시 스타트 버튼 활성화
-
-        // ✅ 결과 버튼을 GO 상태로 활성화
-        var txt = resultButton.GetComponentInChildren<Text>();
-        if (txt != null)
-            txt.text = "GO";
-
-        resultButton.interactable = true; // ⭐ 골 선택 시 GO 버튼 활성화
-
-        // 이전 선택된 버튼 색상 복원
-        selectedGoalButton?.ResetColor();
-
-        // 새로 선택된 버튼 강조
-        clickedButton.Highlight();
-
-        // 나머지 버튼 dim 처리
-        DimOtherGoalButtons(clickedButton);
-
-        selectedGoalButton = clickedButton;
-
-        // ✅ 골 버튼 선택되었으므로 스타트 버튼들 활성화
-        SetStartButtonsInteractable(true);
-
-        // ✅ 골버튼이 선택된 후 스타트 버튼 배율 업데이트
-        UpdateStartButtonMultiplierTexts();
-
-        // ✅ 기대값 출력 보드 텍스트 업데이트
-        if (boardText != null && betAmountUIManager != null)
         {
-            int betAmount = betAmountUIManager.GetBetAmount();            // 현재 배팅 코인
-            int goalMultiplier = verticalCount;                           // 골 버튼 배율 = 세로줄 수
-            int expectedReward = betAmount * goalMultiplier;
+            // 색상 및 텍스트 초기화
+            clickedButton.ResetColor();
+            clickedButton.SetTextVisible(true);
+            selectedGoalButton = null;
+
+            // 모든 골 버튼 텍스트 다시 보이게
+            foreach (var btn in destinationButtons)
+                btn.SetTextVisible(true);
+
+            // 결과 버튼 비활성화
+            resultButton.interactable = false;
+
+            // 보드 텍스트 초기화
             if (rewardText != null)
-            {
-                rewardText.gameObject.SetActive(true); // ✅ 보이기
-                rewardText.text = $"기대값: {expectedReward} 코인";
-            }
-            boardText.text = $"도착 지점을 선택하세요!";
+                rewardText.gameObject.SetActive(false);
+
+            return;
         }
 
+        // ✅ 기존 선택 골 버튼 초기화
+        if (selectedGoalButton != null)
+        {
+            selectedGoalButton.ResetColor();           // 색상 복원
+            selectedGoalButton.SetTextVisible(true);   // 텍스트 다시 표시
+        }
 
+        // ✅ 새로 선택된 골 버튼 강조 (노란색)
+        clickedButton.HighlightWithColor(Color.yellow);
+        clickedButton.SetTextVisible(true);
+
+        // ✅ 나머지 골 버튼 Dim 처리 + 텍스트 숨김
+        DimOtherGoalButtons(clickedButton);
+
+        // ✅ 현재 선택된 골 버튼으로 등록
+        selectedGoalButton = clickedButton;
+
+        // ✅ 스타트 버튼 활성화
+        SetStartButtonsInteractable(true);
+
+        // ✅ 결과 버튼 텍스트 → "GO", 버튼 활성화
+        var txt = resultButton.GetComponentInChildren<Text>();
+        if (txt != null) txt.text = "GO";
+        resultButton.interactable = true;
+
+        // ✅ 스타트 버튼 배율 갱신 (골 선택 후)
+        UpdateStartButtonMultiplierTexts();
+
+        // ✅ 기대값 텍스트 갱신 (골 배율만 사용)
+        if (rewardText != null && betAmountUIManager != null)
+        {
+            int betAmount = betAmountUIManager.GetBetAmount();               // 현재 배팅 금액
+            float goalMultiplier = verticalCount * goalMultiplierFactor;     // 예: 3×0.9 = 2.7
+            float expectedReward = betAmount * goalMultiplier;
+
+            rewardText.text = $"기대값: {expectedReward:F1} 코인";
+            rewardText.gameObject.SetActive(true);
+        }
     }
 
     public void OnResultButtonPressed()
@@ -388,7 +411,10 @@ public class LadderManager : MonoBehaviour
         foreach (var button in destinationButtons)
         {
             if (button != null && button != selectedButton)
+            {
                 button.Dim();
+                button.SetTextVisible(false); // ✅ 텍스트 숨김
+            }
         }
     }
 
@@ -396,37 +422,43 @@ public class LadderManager : MonoBehaviour
     {
         foreach (var button in destinationButtons)
         {
-            button?.ResetColor();
+            if (button != null)
+            {
+                button.ResetColor();            // ✅ 색상 복구
+                button.SetTextVisible(true);    // ✅ 텍스트 복구
+            }
         }
         selectedGoalButton = null;
 
     }
 
     /// <summary>
-    /// 골 버튼 생성 및 위치 설정
-    /// - 각 버튼에 배당률 텍스트를 설정
-    /// - destinationIndex를 정확히 할당해야 선택 결과가 올바르게 작동
+    /// 도착 지점(골 버튼) 생성 및 배치, 배율 표시(float)
     /// </summary>
     public void InitializeDestinationButtons(int verticalCount)
     {
-        // 기존 골 버튼 오브젝트 제거
+        // 기존 버튼 제거
         foreach (Transform child in destinationButtonsParent)
             Destroy(child.gameObject);
         destinationButtons.Clear();
 
-        // 세로줄 기준으로 버튼 위치 계산 및 생성
         for (int i = 0; i < verticalCount; i++)
         {
-            // 골 버튼 프리팹 생성 및 위치 설정
+            // 프리팹 생성
             GameObject buttonGO = Instantiate(destinationButtonPrefab, destinationButtonsParent);
+
+            // 위치 계산 및 배치
             RectTransform rect = buttonGO.GetComponent<RectTransform>();
             float x = LadderLayoutHelper.GetXPosition(i, ladderWidth, verticalCount);
-            rect.anchoredPosition = new Vector2(x, -300f); // Y값 고정된 아래 위치
+            rect.anchoredPosition = new Vector2(x, -300f);
 
-            // GoalBettingButton 설정
+            // 컴포넌트 설정
             GoalBettingButton btn = buttonGO.GetComponent<GoalBettingButton>();
-            btn.destinationIndex = i;                          // ✅ 꼭 설정해야 결과 판단 가능
-            btn.SetMultiplierText(verticalCount);              // ✅ 배당률 텍스트 설정
+            btn.destinationIndex = i;
+
+            // 배율 계산: 세로줄 수 × 계수
+            float multiplier = verticalCount * goalMultiplierFactor;
+            btn.SetMultiplierText(multiplier);  // float 처리
 
             destinationButtons.Add(btn);
         }
@@ -528,42 +560,70 @@ public class LadderManager : MonoBehaviour
         selectedStartIndex = index;
     }
 
+    /// <summary>
+    /// 스타트 버튼이 선택되었을 때 실행되는 함수
+    /// - 선택한 버튼은 주황색으로 하이라이트
+    /// - 나머지 버튼은 Dim 처리 (흰색 등)
+    /// - 배당 텍스트는 goalFactor × startFactor × 세로줄² 반영
+    /// </summary>
     public void HighlightSelectedStartButton(StartBettingButton selectedButton)
     {
-        if (selectedStartButton != null)
-            selectedStartButton.ResetColor();
-
-        if (selectedButton != null)
-            selectedButton.Highlight();
-
-        DimOtherStartButtons(selectedButton);
-        selectedStartButton = selectedButton;
-
-        // ✅ 기대값 갱신 (배팅 금액 × 스타트 버튼 배율)
-        if (boardText != null && betAmountUIManager != null)
+        // 🔁 같은 버튼을 다시 눌렀다면 선택 해제
+        if (this.selectedStartButton == selectedButton)
         {
-            int betAmount = betAmountUIManager.GetBetAmount();   // 현재 배팅 금액
-            int verticalCount = this.verticalCount;              // 세로줄 수
-            int startMultiplier = verticalCount * verticalCount; // 스타트 배율 = 세로줄 * 세로줄
+            // 기존 색상 초기화
+            selectedStartButton.ResetColor();
+            ResetAllStartButtonColors(); // 모든 텍스트 및 색 초기화
+            selectedStartButton = null;
+            selectedStartIndex = -1;
 
-            int expectedReward = betAmount * startMultiplier;
-
-            // 기존 메시지 유지 + 기대값 추가
-            boardText.text = $"도착 지점을 선택하세요!";
-            if (rewardText != null)
+            // ✅ 기대값 텍스트 다시 골 기준으로 출력
+            if (rewardText != null && selectedGoalButton != null && betAmountUIManager != null)
             {
-                rewardText.gameObject.SetActive(true); // ✅ 보이기
-                rewardText.text = $"기대값: {expectedReward} 코인";
+                float goalFactor = goalMultiplierFactor;
+                float multiplier = verticalCount * goalFactor;
+                int bet = betAmountUIManager.GetBetAmount();
+                rewardText.text = $"기대값: {(bet * multiplier):F1} 코인";
             }
+
+            return;
         }
+
+        // ✅ 선택한 스타트 버튼은 노란으로 강조
+        selectedButton.HighlightWithColor(Color.yellow);
+
+        // ✅ 다른 버튼들은 흰색 또는 흐린 색으로 처리
+        DimOtherStartButtons(selectedButton);
+
+        // ✅ 선택 상태 저장
+        this.selectedStartButton = selectedButton;
+        this.selectedStartIndex = selectedButton.startIndex;
+
+        // ✅ 텍스트 업데이트: goalFactor × startFactor × vertical²
+        if (rewardText != null && betAmountUIManager != null)
+        {
+            float gFactor = goalMultiplierFactor;
+            float sFactor = startMultiplierFactor;
+            float multiplier = gFactor * sFactor * (verticalCount * verticalCount);
+            int bet = betAmountUIManager.GetBetAmount();
+            rewardText.text = $"기대값: {(bet * multiplier):F1} 코인";
+        }
+
+        // ✅ 텍스트도 해당 배율로 업데이트
+        UpdateStartButtonMultiplierTexts();
     }
 
+    /// <summary>
+    /// 선택된 스타트 버튼을 제외한 나머지를 dim 처리 (흰색으로 변경)
+    /// </summary>
     private void DimOtherStartButtons(StartBettingButton selectedButton)
     {
         foreach (var btn in startButtons)
         {
             if (btn != null && btn != selectedButton)
-                btn.Dim();
+            {
+                btn.HighlightWithColor(Color.white); // 흰색으로 설정
+            }
         }
     }
 
@@ -617,30 +677,34 @@ public class LadderManager : MonoBehaviour
             startButtons.Add(btn);
 
             // ✅ 스타트 버튼 배율 계산
-            // - 골버튼 배율은 세로줄 개수 (예: 3줄 → 3X)
-            // - 스타트 버튼은 (세로줄 개수 * 세로줄 개수) 배율로 표시 (예: 3x3 = 9X)
-            int multiplier = verticalCount * verticalCount;
+            // 배율 계산
+            int multiplier = Mathf.RoundToInt(verticalCount * startMultiplierFactor);
 
-            // 텍스트 UI 찾아 배율 출력 (예: "9X")
+            // 텍스트 UI에 설정
             Text label = startButtonGO.GetComponentInChildren<Text>();
             if (label != null)
-            {
-                int rewardMultiplier = verticalCount * verticalCount;
-                label.text = $"{rewardMultiplier}X"; // ✅ 예: "25X"
-            }
+                label.text = $"{multiplier}X";
         }
     }
 
     /// <summary>
-    /// 모든 Start 버튼 색상을 초기화 (선택 해제)
+    /// 모든 스타트 버튼의 색상과 텍스트를 초기화함
     /// </summary>
     public void ResetAllStartButtonColors()
     {
-        foreach (var button in startButtons)
+        foreach (var btn in startButtons)
         {
-            if (button != null)
-                button.ResetColor(); // StartBettingButton 클래스 내부 함수
+            if (btn != null)
+            {
+                btn.ResetColor(); // 색 초기화 (통상 white 또는 default)
+                Text label = btn.GetComponentInChildren<Text>();
+                if (label != null)
+                {
+                    label.text = ""; // 텍스트 제거 (선택 해제 시)
+                }
+            }
         }
+
         selectedStartButton = null;
         selectedStartIndex = -1;
     }
@@ -702,28 +766,30 @@ public class LadderManager : MonoBehaviour
         return text != null && text.text == "READY";
     }
 
-    public void SetMultiplierText(int verticalCount)
+    public void SetMultiplierText(int multiplier)
     {
-        Text multiplierText = GetComponentInChildren<Text>();
-        if (multiplierText != null)
-        {
-            int multiplier = verticalCount * verticalCount;
-            multiplierText.text = $"{multiplier}X";
-        }
+        Text label = GetComponentInChildren<Text>();
+        if (label != null)
+            label.text = $"{multiplier}X";
     }
 
+    /// <summary>
+    /// 모든 스타트 버튼의 텍스트에 정확한 배당률 출력
+    /// - 골 × 스타트 × 세로줄^2
+    /// </summary>
     private void UpdateStartButtonMultiplierTexts()
     {
-        int goalMultiplier = verticalCount; // 골 버튼 배당률 = 세로줄 수
+        float gFactor = goalMultiplierFactor;
+        float sFactor = startMultiplierFactor;
 
-        int finalMultiplier = verticalCount * goalMultiplier; // 스타트 배당 = 세로줄^2
+        float multiplier = gFactor * sFactor * (verticalCount * verticalCount);
 
         foreach (var btn in startButtons)
         {
             Text label = btn.GetComponentInChildren<Text>();
             if (label != null)
             {
-                label.text = $"{finalMultiplier}X"; // ✅ 예: 25X
+                label.text = $"{multiplier:F1}X";
             }
         }
     }

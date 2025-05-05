@@ -127,15 +127,16 @@ public class BetAmountUIManager : MonoBehaviour
            ladderManager.SetGoalButtonsInteractable(betAmount > 0);
     }
 
+    // BetAmountUIManager.cs
 
+    public void SetInteractable(bool isInteractable)
+    {
+        if (betSlider != null) betSlider.interactable = isInteractable;
 
-    // BetAmountUIManager.cs 안에 추가
-    //public void OnBetConfirmed()
-    //{
-    //    int finalAmount = GetBetAmount();
-    //    Debug.Log($"✅ 최종 배팅 금액 확정됨: {finalAmount} 코인");
-
-    //    // 필요한 경우 LadderManager 또는 게임 로직에 전달
-    //    // 예: ladderManager.SetBetAmount(finalAmount);
-    //}
+        if (bet1Button != null) bet1Button.interactable = isInteractable;
+        if (bet5Button != null) bet5Button.interactable = isInteractable;
+        if (bet10Button != null) bet10Button.interactable = isInteractable;
+        if (bet50Button != null) bet50Button.interactable = isInteractable;
+        if (bet100Button != null) bet100Button.interactable = isInteractable;
+    }
 }
