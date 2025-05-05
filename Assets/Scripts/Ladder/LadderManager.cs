@@ -119,6 +119,7 @@ public class LadderManager : MonoBehaviour
         }
 
         UpdateCoinUI(); // 시작 시 보유 코인 텍스트 표시
+        
     }
 
     private void OnBetAmountConfirmed(int amount)
@@ -804,8 +805,7 @@ public class LadderManager : MonoBehaviour
         resultButton.interactable = true;
         resultButton.GetComponentInChildren<Text>().text = "READY";
 
-        // 예시: 확인 버튼 활성화, 로그 표시 등 필요한 로직 여기에 작성
-        // resultButton.interactable = true;
+        UpdateResultButtonInteractable(); // 🟡 여기서 호출
     }
 
     public bool IsInReadyState()
@@ -860,6 +860,8 @@ public class LadderManager : MonoBehaviour
     {
         currentCoin = Mathf.Max(0, amount); // 음수 방지
         UpdateCoinUI();
+        UpdateResultButtonInteractable(); // 🟡 여기서 호출
+        UpdateSliderMaxValue(); // 🟡 슬라이더 제한도 업데이트
     }
 
     /// <summary>
@@ -869,6 +871,8 @@ public class LadderManager : MonoBehaviour
     {
         currentCoin = Mathf.Max(0, currentCoin + amount); // 음수 방지
         UpdateCoinUI();
+        UpdateResultButtonInteractable(); // 🟡 여기서 호출
+        UpdateSliderMaxValue(); // 🟡 슬라이더 제한도 업데이트
     }
 
     /// <summary>
@@ -879,4 +883,39 @@ public class LadderManager : MonoBehaviour
         if (coinTextUI != null)
             coinTextUI.text = $"코인: {currentCoin:F1}";
     }
+
+    /// <summary>
+    /// 현재 배팅금액이 보유코인보다 작거나 같은지 확인
+    /// </summary>
+    private bool HasEnoughCoin()
+    {
+        if (betAmountUIManager == null)
+            return false;
+
+        float betAmount = betAmountUIManager.GetBetAmount();
+        return betAmount > 0f && betAmount <= currentCoin;
+    }
+
+    /// <summary>
+    /// 현재 코인 및 배팅 상태에 따라 결과 버튼 활성/비활성 설정
+    /// </summary>
+    private void UpdateResultButtonInteractable()
+    {
+        if (resultButton == null || betAmountUIManager == null)
+            return;
+
+        resultButton.interactable = HasEnoughCoin();
+    }
+
+    /// <summary>
+    /// 현재 보유 코인에 따라 슬라이더 최대값을 조절
+    /// </summary>
+    private void UpdateSliderMaxValue()
+    {
+        if (betAmountUIManager == null)
+            return;
+
+        betAmountUIManager.SetSliderMaxValue(currentCoin);
+    }
+
 }

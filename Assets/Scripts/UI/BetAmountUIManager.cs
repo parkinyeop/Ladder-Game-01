@@ -36,6 +36,14 @@ public class BetAmountUIManager : MonoBehaviour
     private int betAmount = 0;            // 현재 선택된 배팅 금액 (기본값 1)
     private int currentBetAmount = 0; // ✅ 여기 추가
 
+    private void Awake()
+    {
+        if (betSlider != null)
+        {
+            betSlider.wholeNumbers = true; // ✅ 정수 단위로만 이동하도록 설정
+        }
+    }
+
     private void Start()
     {
         // ✅ 슬라이더 이벤트 연결
@@ -58,6 +66,7 @@ public class BetAmountUIManager : MonoBehaviour
         // ✅ 시작 시 배팅금액 0으로 설정
         SetBetAmount(0);
         UpdateBetAmountText();
+        
     }
 
     // 베팅 금액 확정 버튼에서 호출
@@ -127,7 +136,11 @@ public class BetAmountUIManager : MonoBehaviour
            ladderManager.SetGoalButtonsInteractable(betAmount > 0);
     }
 
-    // BetAmountUIManager.cs
+    public void SetSliderMaxValue(float maxValue)
+    {
+        if (betSlider != null)
+            betSlider.maxValue = maxValue;
+    }
 
     public void SetInteractable(bool isInteractable)
     {
@@ -139,4 +152,5 @@ public class BetAmountUIManager : MonoBehaviour
         if (bet50Button != null) bet50Button.interactable = isInteractable;
         if (bet100Button != null) bet100Button.interactable = isInteractable;
     }
+        
 }
