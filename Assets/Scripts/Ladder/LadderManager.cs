@@ -80,8 +80,6 @@ public class LadderManager : MonoBehaviour
     [SerializeField] private BetAmountUIManager betUIManager;
     public BetAmountUIManager betAmountUIManager;
 
-    private BetManager betManager;
-
     private bool isLadderGenerated = false;  // READY 상태 → GO 상태 전환 여부
     public float ladderWidth = 800f;
 
@@ -89,12 +87,6 @@ public class LadderManager : MonoBehaviour
     {
         generator = new LadderGenerator(this);
         playerMover = new PlayerMover(this);
-
-        // 초기화
-        betManager = new BetManager(this, betAmountUIManager);
-        betManager.OnBetConfirmed += OnBetAmountConfirmed;
-
-        betManager.Initialize(); // UI 초기화
 
         // 시작 시 결과창 숨김
         if (resultUIManager != null)
