@@ -13,7 +13,8 @@ public static class LadderLayoutHelper
     /// </summary>
     public static float CalculateSpacingX(float ladderWidth, int verticalCount)
     {
-        return (verticalCount > 1) ? ladderWidth / (verticalCount - 1) : 0f;
+        if (verticalCount <= 1) return 0;
+        return ladderWidth / (verticalCount - 1); // ✅ 반드시 분모는 (count - 1)
     }
 
     /// <summary>
@@ -29,7 +30,7 @@ public static class LadderLayoutHelper
     /// </summary>
     public static float GetStartY(int stepCount, float stepHeight)
     {
-        return ((stepCount - 1) * stepHeight) / 2f;
+        return (stepCount / 2f) * stepHeight;
     }
 
     /// <summary>
@@ -37,18 +38,21 @@ public static class LadderLayoutHelper
     /// </summary>
     public static float GetXPosition(int index, float ladderWidth, int verticalCount)
     {
-        float spacingX = CalculateSpacingX(ladderWidth, verticalCount);
-        float startX = GetStartX(ladderWidth);
-        return startX + spacingX * index;
+        if (verticalCount <= 1) return 0f;
+
+        float spacing = ladderWidth / (verticalCount - 1); // 간격 계산
+        float startX = -((verticalCount - 1) * spacing) / 2f; // 중앙 정렬 기준 시작점
+
+        return startX + (index * spacing); // 최종 X 좌표
     }
 
     /// <summary>
-    /// 층 인덱스를 기반으로 Y 위치 계산 (위에서 아래로 내려감)
+    /// 해당 층 인덱스에 대한 Y 좌표 계산 (UI 기준: 위가 +, 아래가 -)
     /// </summary>
     public static float GetYPosition(int yIndex, int stepCount, float stepHeight)
     {
-        float yStart = GetStartY(stepCount, stepHeight);
-        return yStart - yIndex * stepHeight;
+        float offset = (stepCount - 1) * stepHeight * 0.5f; // 중앙 정렬 기준 오프셋
+        return -yIndex * stepHeight + offset;
     }
 
     /// <summary>
@@ -77,13 +81,14 @@ public static class LadderLayoutHelper
     /// <summary>
     /// 실제 생성된 세로줄의 RectTransform 좌표로부터 사다리 폭 계산
     /// </summary>
-    public static float CalculateActualLadderWidth(List<GameObject> verticalLines)
+    public static float CalculateActualLadderWidth(List<RectTransform> verticalLines)
     {
         if (verticalLines == null || verticalLines.Count < 2)
-            return 800f; // fallback 기본값
+            return 0f; // fallback 기본값
 
-        float left = verticalLines[0].GetComponent<RectTransform>().anchoredPosition.x;
-        float right = verticalLines[verticalLines.Count - 1].GetComponent<RectTransform>().anchoredPosition.x;
-        return Mathf.Abs(right - left);
+        float firstX = verticalLines[0].anchoredPosition.x;
+        float lastX = verticalLines[verticalLines.Count - 1].anchoredPosition.x;
+
+        return Mathf.Abs(lastX - firstX);
     }
 }

@@ -9,6 +9,10 @@ using System.Collections.Generic;
 /// </summary>
 public class LadderManager : MonoBehaviour
 {
+    [Header("사다리 관련 클래스")]
+    public LadderGenerator ladderGenerator;
+    public PlayerMover playerMover;
+
     [Header("배당 설정")]
     [Tooltip("골/스타트 배율 결정에 곱해지는 계수 (예: 0.5이면 2줄 × 0.5 = 1X)")]
     public float goalMultiplierFactor = 0.5f;
@@ -66,12 +70,12 @@ public class LadderManager : MonoBehaviour
     public Text coinTextUI;       // 인스펙터에서 연결할 텍스트 오브젝트
 
     private LadderGenerator generator;          // 사다리 생성기
-    private PlayerMover playerMover;            // 플레이어 이동기
+    //private PlayerMover playerMover;            // 플레이어 이동기
     private GameObject spawnedPlayer;           // 현재 생성된 플레이어 오브젝트
 
     private GoalBettingButton selectedGoalButton = null;                // 선택된 골 버튼 참조
     private List<GoalBettingButton> destinationButtons = new();        // 모든 골 버튼 리스트
-    private List<GameObject> verticalLines = new();                    // 생성된 세로줄 오브젝트 저장
+    private List<RectTransform> verticalLines = new();
 
     [Header("출발 버튼 관련")]
     public GameObject startButtonPrefab;             // 출발 버튼 프리팹
@@ -83,15 +87,30 @@ public class LadderManager : MonoBehaviour
     private bool isLadderGenerated = false;  // READY 상태 → GO 상태 전환 여부
     public float ladderWidth = 800f;
 
+
     private void Start()
     {
+        // ✅ LadderGenerator와 PlayerMover는 반드시 여기서 초기화되어야 함
         generator = new LadderGenerator(this);
         playerMover = new PlayerMover(this);
 
-        // 시작 시 결과창 숨김
+        // ✅ 인스펙터 연결 확인
+        if (generateButton == null) Debug.LogError("🚨 generateButton이 연결되지 않았습니다.");
+        if (resultButton == null) Debug.LogError("🚨 resultButton이 연결되지 않았습니다.");
+        if (resultUIManager == null) Debug.LogWarning("⚠ resultUIManager가 연결되지 않았습니다.");
+        if (ladderRoot == null) Debug.LogError("🚨 ladderRoot가 연결되지 않았습니다.");
+        if (verticalLinePrefab == null) Debug.LogError("🚨 verticalLinePrefab이 연결되지 않았습니다.");
+        if (horizontalLinePrefab == null) Debug.LogError("🚨 horizontalLinePrefab이 연결되지 않았습니다.");
+        if (startButtonPrefab == null) Debug.LogError("🚨 startButtonPrefab이 연결되지 않았습니다.");
+        if (startButtonsParent == null) Debug.LogError("🚨 startButtonsParent가 연결되지 않았습니다.");
+        if (destinationButtonPrefab == null) Debug.LogError("🚨 destinationButtonPrefab이 연결되지 않았습니다.");
+        if (destinationButtonsParent == null) Debug.LogError("🚨 destinationButtonsParent가 연결되지 않았습니다.");
+
+        // ✅ 시작 시 결과 UI 비활성화
         if (resultUIManager != null)
             resultUIManager.Hide(); // resultPanel은 내부에서 관리
 
+        // ✅ 배팅 금액 UI 연결 상태 확인
         if (betAmountUIManager != null)
         {
             betAmountUIManager.OnBetConfirmed += OnBetConfirmedHandler;
@@ -101,15 +120,17 @@ public class LadderManager : MonoBehaviour
             Debug.LogError("🚨 BetAmountUIManager가 연결되지 않았습니다.");
         }
 
+        // ✅ 버튼 이벤트 연결
         SetupUI();
+        if (generateButton != null)
+            generateButton.onClick.AddListener(GenerateLadder);
+        if (resultButton != null)
+            resultButton.onClick.AddListener(OnResultButtonPressed);
 
-        generateButton.onClick.AddListener(GenerateLadder);
-        resultButton.onClick.AddListener(OnResultButtonPressed); // ✅ 상태 기반 처리
-
+        // ✅ UI 텍스트 초기화
         UpdateVerticalCountText();
         UpdateHorizontalLineCountText();
 
-        // ✅ 결과 버튼 텍스트 초기화
         if (resultButton != null)
         {
             var txt = resultButton.GetComponentInChildren<Text>();
@@ -118,7 +139,11 @@ public class LadderManager : MonoBehaviour
             resultButton.interactable = false;
         }
 
-        UpdateCoinUI(); // 시작 시 보유 코인 텍스트 표시
+        // ✅ 시작 시 코인 UI 표시
+        UpdateCoinUI();
+
+        // 🔥 MonoBehaviour에선 생성자 X → 별도 초기화 함수 사용
+        ladderGenerator.Initialize(this);
     }
 
     private void OnBetAmountConfirmed(int amount)
@@ -140,87 +165,98 @@ public class LadderManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 사다리 생성 버튼 클릭 시 처리
+    /// 사다리 생성 시작 함수 (READY 상태에서 실행됨)
+    /// - 세로줄만 생성하고, 버튼 및 보드 UI 초기화
+    /// - 가로줄은 GO 버튼 클릭 시 생성됨
     /// </summary>
     public void GenerateLadder()
     {
-        // 가로줄 수 무작위 생성
-        int min = Mathf.Max(1, verticalCount - 1);
-        int max = verticalCount + 3;
-        horizontalLineCount = Random.Range(min, max + 1);
+        // ✅ 세로줄 생성만 먼저 수행 (가로줄은 나중에)
+        ladderGenerator.GenerateVerticalLines(verticalCount, stepCount);
 
-        generator.GenerateLadder(verticalCount, stepCount, horizontalLineCount, randomizeHorizontalLines);
+        // ✅ 이전 라운드에서 선택되었던 골 버튼 초기화
         ResetAllGoalButtonColors();
 
-        // ✅ 보드 활성화 및 메시지 출력
+        // ✅ 결과 버튼은 초기화 시점에서 비활성화
+        resultButton.interactable = false;
+
+        // ✅ 도착 버튼 배치 (사다리 위치 기준으로)
+        InitializeDestinationButtons(verticalCount);
+
+        // ✅ 출발 버튼 배치
+        InitializeStartButtons(verticalCount);
+
+        // ✅ 보드 UI 활성화 및 안내 메시지 출력
         if (board != null) board.SetActive(true);
         if (boardText != null) boardText.text = "도착 지점을 선택하세요!";
 
-        // ✅ 배팅 금액이 0이면 결과 버튼 비활성화
+        // ✅ 배팅 금액이 설정되지 않은 경우 결과 버튼 비활성화
         int currentBet = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0;
         resultButton.interactable = (currentBet > 0);
 
-
-        // ✅ 결과 버튼 텍스트를 "READY"로 변경
+        // ✅ 결과 버튼 텍스트 초기화 ("READY")
         resultButton.GetComponentInChildren<Text>().text = "READY";
 
-        // ✅ GO 실행 잠금: 골 선택 전까지 비활성화
-        resultButton.interactable = false;
-
+        // ✅ 스타트 버튼은 아직 선택할 수 없도록 비활성화
         SetStartButtonsInteractable(false);
 
+        // ✅ 보상 텍스트 숨기기
         if (rewardText != null)
             rewardText.gameObject.SetActive(false);
 
-        // GenerateLadder() 끝 부분에 추가
+        // ✅ 사다리 생성 이후 배팅 UI는 비활성화 (GO까지 진행)
         if (betAmountUIManager != null)
-            betAmountUIManager.SetInteractable(false); // 🔒 사다리 생성 후 배팅 비활성화
+            betAmountUIManager.SetInteractable(false);
 
-        // ✅ 결과창 숨김 처리
+        // ✅ 결과 UI 패널 숨기기 (새 라운드 시작)
         if (resultUIManager != null)
             resultUIManager.Hide();
     }
 
     /// <summary>
     /// 결과 버튼(GO) 클릭 시 실행
+    /// - 사다리 가로줄 생성
     /// - 플레이어 생성 및 이동 시작
     /// </summary>
     public void OnResultButtonClicked()
     {
+        // 🔒 플레이어가 이미 이동 중이라면 중복 실행 방지
         if (playerMover.IsMoving())
             return;
 
+        // ✅ 골 버튼을 선택하지 않은 경우 경고 메시지 출력
         if (selectedGoalButton == null)
         {
             if (boardText != null) boardText.text = "도착 지점을 선택하세요!";
             return;
         }
 
+        // ✅ 보드 UI는 숨김
         if (board != null) board.SetActive(false);
 
-        // ⭐ startIndex를 여기에 정의해야 함!
+        // ⭐ 시작 위치 인덱스 결정 (선택되지 않았으면 랜덤)
         int startIndex = selectedStartIndex >= 0
             ? selectedStartIndex
             : Random.Range(0, verticalCount);
 
-        // ⭐ 스타트 버튼 텍스트 초기화
+        // 🔁 모든 스타트 버튼 텍스트 초기화
         foreach (var btn in startButtons)
         {
             Text label = btn.GetComponentInChildren<Text>();
             if (label != null) label.text = "";
         }
 
-        // ✅ 모든 버튼 색상 초기화 (이후 강조할 버튼은 따로 처리)
+        // 🔁 모든 스타트 버튼 색상 초기화
         ResetAllStartButtonColors();
 
-        // ⭐ 랜덤 선택인 경우 강조 적용
+        // ⭐ 랜덤 선택일 경우 버튼 하이라이트 (노란색)
         if (selectedStartIndex < 0 && startIndex >= 0 && startIndex < startButtons.Count)
         {
             selectedStartButton = startButtons[startIndex];
-            selectedStartButton.HighlightWithColor(Color.yellow); // ✅ 노란색으로 강조
+            selectedStartButton.HighlightWithColor(Color.yellow);
         }
 
-        // 기존 플레이어 제거
+        // 🔁 기존 플레이어가 있다면 제거
         if (playerTransform != null)
         {
             playerMover.StopMove(this);
@@ -228,9 +264,16 @@ public class LadderManager : MonoBehaviour
             playerTransform = null;
         }
 
-        // 플레이어 프리팹 생성
+        // ✅ ladderMap 초기화 필수!! (가로줄 생성을 위해)
+        ladderGenerator.ladderMap = new bool[stepCount, verticalCount - 1];
+
+        // ✅ 가로줄 생성 (무작위 보장 방식)
+        ladderGenerator.CreateHorizontalLinesWithGuarantee();
+
+        // ✅ 플레이어 프리팹 존재 여부 확인
         if (playerPrefab == null) return;
 
+        // ✅ 플레이어 생성 및 배치
         GameObject playerGO = Instantiate(playerPrefab, ladderRoot);
         playerTransform = playerGO.transform;
 
@@ -241,19 +284,18 @@ public class LadderManager : MonoBehaviour
         if (rect != null)
             rect.anchoredPosition = new Vector2(x, y);
 
-        // 이동 세팅 및 실행
+        // ✅ 플레이어 이동 시작
         playerMover.Setup(playerTransform, startIndex, 500f);
         playerMover.SetFinishCallback(CheckResult);
         playerMover.StartMove(this);
 
-        // 결과 버튼 비활성화
+        // ✅ 결과 버튼 비활성화 (이동 중 중복 클릭 방지)
         resultButton.interactable = false;
 
         // ✅ 기대값 텍스트 숨김
         if (rewardText != null)
             rewardText.gameObject.SetActive(false);
     }
-
     /// <summary>
     /// 플레이어 도착 후 성공 여부 판단 및 보상 처리
     /// </summary>
@@ -523,12 +565,12 @@ public class LadderManager : MonoBehaviour
     /// <summary>
     /// 생성된 세로줄 오브젝트 리스트를 저장
     /// </summary>
-    public void SetVerticalLines(List<GameObject> lines)
+    public void SetVerticalLines(List<RectTransform> lines)
     {
         verticalLines = lines;
     }
 
-    public List<GameObject> GetVerticalLines() => verticalLines;
+    
 
     private void IncreaseVerticalCount()
     {
@@ -683,52 +725,40 @@ public class LadderManager : MonoBehaviour
     /// </summary>
     public void InitializeStartButtons(int verticalCount)
     {
-        //Debug.log($"✅ InitializeStartButtons 실행됨 verticalCount={verticalCount}");
-
-        // 1. 유효성 검사: 부모 객체와 프리팹이 유효한지 확인
-        if (startButtonsParent == null || startButtonPrefab == null)
+        if (verticalLines.Count < verticalCount)
         {
-            //Debug.logError("🚨 StartButtonsParent 또는 StartButtonPrefab이 설정되지 않았습니다.");
+            Debug.LogError($"🚨 verticalLines 개수가 부족합니다! 현재: {verticalLines.Count}, 기대값: {verticalCount}");
             return;
         }
 
-        // 2. 기존 버튼 제거
+        if (startButtonsParent == null || startButtonPrefab == null)
+            return;
+
         foreach (Transform child in startButtonsParent)
             Destroy(child.gameObject);
         startButtons.Clear();
 
-        // 3. 스타트 버튼 배치 기준 Y 값 (상단 고정)
         float buttonY = 300f;
 
-        // 4. 세로줄 기준으로 실제 너비 계산 (가변 ladderWidth 반영)
-        float actualLadderWidth = LadderLayoutHelper.CalculateActualLadderWidth(GetVerticalLines());
-
-        // 5. 스타트 버튼 생성 및 배치
+        // ✅ 세로줄의 RectTransform 기준으로 직접 위치 참조
         for (int i = 0; i < verticalCount; i++)
         {
-            // 정확한 X 위치 계산 (실측 ladderWidth 사용)
-            float x = LadderLayoutHelper.GetXPosition(i, actualLadderWidth, verticalCount);
+            // ⛳ 세로줄 X 위치 직접 가져오기
+            float x = verticalLines[i].anchoredPosition.x;
+            Debug.Log($"🚩 StartButton #{i} X pos: {x}");
 
-            // 프리팹 인스턴스화 및 부모 설정
             GameObject startButtonGO = Instantiate(startButtonPrefab, startButtonsParent);
             RectTransform rect = startButtonGO.GetComponent<RectTransform>();
 
-            // 중앙 기준 위치 정렬
-            rect.anchorMin = new Vector2(0.5f, 0.5f);
-            rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = new Vector2(x, buttonY);
 
-            // 버튼 스크립트 및 인덱스 설정
             StartBettingButton btn = startButtonGO.GetComponent<StartBettingButton>();
             btn.startIndex = i;
             startButtons.Add(btn);
 
-            // ✅ 스타트 버튼 배율 계산
-            // 배율 계산
+            // 배율 표시
             int multiplier = Mathf.RoundToInt(verticalCount * startMultiplierFactor);
-
-            // 텍스트 UI에 설정
             Text label = startButtonGO.GetComponentInChildren<Text>();
             if (label != null)
                 label.text = $"{multiplier}X";
@@ -878,5 +908,11 @@ public class LadderManager : MonoBehaviour
     {
         if (coinTextUI != null)
             coinTextUI.text = $"코인: {currentCoin:F1}";
+    }
+
+    // ✅ 정확한 함수 정의 예시
+    public List<RectTransform> GetVerticalLines()
+    {
+        return verticalLines;
     }
 }

@@ -62,6 +62,7 @@ public class PlayerMover
     private IEnumerator MoveAlongLadder()
     {
         isMoving = true;
+        bool moved = false;
 
         int currentX = startIndex;                           // 현재 세로줄 위치
         int stepCount = ladderManager.stepCount;             // 전체 층 수
@@ -103,8 +104,10 @@ public class PlayerMover
                     LadderLayoutHelper.GetXPosition(currentX, ladderManager.ladderWidth, ladderManager.verticalCount),
                     yPos
                 ));
+                moved = true;
             }
-            else if (currentX > 0 && ladderManager.HasHorizontalLine(y, currentX - 1))
+
+            if (!moved && currentX > 0 && ladderManager.HasHorizontalLine(y, currentX - 1))
             {
                 currentX--; // 좌측 이동
                 yield return MoveTo(new Vector2(

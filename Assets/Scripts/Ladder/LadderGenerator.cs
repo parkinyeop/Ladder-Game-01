@@ -7,13 +7,207 @@ using UnityEngine.UI;
 /// - LadderManager로부터 사다리 생성 명령을 받아 UI 기반 사다리를 구성
 /// - 세로줄과 가로줄을 위치 계산 헬퍼를 기반으로 정확하게 정렬함
 /// </summary>
-public class LadderGenerator
+public class LadderGenerator : MonoBehaviour
 {
+    [Header("세로줄 프리팹 및 부모")]
+    public GameObject verticalLinePrefab;
+    public Transform ladderParent;
+
+    [Header("가로줄 프리팹")]
+    public GameObject horizontalLinePrefab;
+
+    [Header("세팅 값")]
+    public float spacingX = 160f; // 세로줄 간격
+    public float spacingY = 80f;  // 가로줄 간격
+    public float horizontalLineHeight = 10f;
+
+    // 생성된 사다리 정보 저장
+    public List<RectTransform> verticalLines = new List<RectTransform>();
+    public bool[,] ladderMap; // [y, x] : 가로줄 존재 여부
+    private int verticalCount;
+    private int stepCount;
+
     private LadderManager manager;                         // LadderManager 참조 (설정값, 프리팹, 부모 등 접근용)
-    private List<GameObject> verticalLines = new();        // 생성된 세로줄 오브젝트 리스트
-    private bool[,] ladderMap;                             // 사다리 가로줄 존재 정보 [y=층, x=세로줄 사이]
+    //private List<GameObject> verticalLines = new();        // 생성된 세로줄 오브젝트 리스트
+    //private bool[,] ladderMap;                             // 사다리 가로줄 존재 정보 [y=층, x=세로줄 사이]
 
     private const float ladderWidth = 800f;                // 사다리 전체 가로폭 (위치 계산 공통 기준)
+
+    public void Initialize(LadderManager manager)
+    {
+        this.manager = manager;
+    }
+
+    public void GenerateVerticalLines(int verticalCount, int stepCount)
+    {
+        this.verticalCount = verticalCount;
+        this.stepCount = stepCount;
+
+        verticalLines.Clear();
+
+        if (ladderParent == null)
+        {
+            Debug.LogError("🚨 ladderParent가 연결되지 않았습니다.");
+            return;
+        }
+
+        foreach (Transform child in ladderParent)
+        {
+            UnityEngine.Object.Destroy(child.gameObject);
+        }
+
+        for (int i = 0; i < verticalCount; i++)
+        {
+            if (verticalLinePrefab == null)
+            {
+                Debug.LogError("🚨 verticalLinePrefab이 연결되지 않았습니다.");
+                continue;
+            }
+
+            GameObject line = Instantiate(verticalLinePrefab, ladderParent);
+            RectTransform rt = line.GetComponent<RectTransform>();
+
+            if (rt != null)
+            {
+                float x = GetXPosition(i);
+                Debug.Log($"✅ VerticalLine #{i} X pos: {x}");
+
+                rt.anchoredPosition = new Vector2(x, 0f);
+                verticalLines.Add(rt);
+            }
+            else
+            {
+                Debug.LogError($"🚨 verticalLinePrefab에 RectTransform이 없습니다! index={i}");
+            }
+        }
+
+        if (manager == null)
+        {
+            Debug.LogError("🚨 manager가 null입니다. 생성자 주입 여부 확인 필요");
+            return;
+        }
+
+        manager.SetVerticalLines(verticalLines);
+    }
+    // ---------------------------------------------------------------------
+    // ✅ 가로줄을 생성하는 함수 (GO 버튼 누를 때 호출)
+    public void CreateHorizontalLinesWithGuarantee()
+    {
+        int min = verticalCount - 1;
+        int max = verticalCount + 3;
+        int horizontalLineCount = Random.Range(min, max + 1);
+
+        int created = 0;
+        int safety = 1000; // 무한 루프 방지용
+
+        if (ladderMap == null)
+        {
+            Debug.LogWarning("⚠ ladderMap이 null 상태였습니다. 새로 초기화합니다.");
+            ladderMap = new bool[stepCount, verticalCount - 1];
+        }
+
+        while (created < horizontalLineCount && safety-- > 0)
+        {
+            int y = Random.Range(0, stepCount);
+            int x = Random.Range(0, verticalCount - 1);
+
+            // 양 옆에 이미 가로줄이 있으면 생성하지 않음
+            if ((x > 0 && ladderMap[y, x - 1]) || ladderMap[y, x] || (x < verticalCount - 2 && ladderMap[y, x + 1]))
+                continue;
+
+            ladderMap[y, x] = true;
+            CreateHorizontalLine(y, x);
+            created++;
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // ✅ 실제 가로줄 UI를 생성하는 함수
+    // ✅ 실제 가로줄 UI를 생성하는 함수
+    /// <summary>
+    /// 지정된 좌표에 정확한 길이의 가로줄을 생성하는 함수
+    /// - 두 세로줄 사이 간격을 기준으로 가로줄 길이를 정확히 일치시킴
+    /// - anchoredPosition 기준으로 중앙에 배치됨
+    /// </summary>
+    private void CreateHorizontalLine(int y, int x)
+    {
+        // 예외 방지: 세로줄 인덱스 유효성 체크
+        if (verticalLines == null || verticalLines.Count <= x + 1)
+        {
+            Debug.LogError($"🚨 가로줄 생성 실패: verticalLines가 부족하거나 잘못된 인덱스 접근. x={x}");
+            return;
+        }
+
+        RectTransform left = verticalLines[x];
+        RectTransform right = verticalLines[x + 1];
+
+        // 세로줄 좌표 확인
+        float startX = left.anchoredPosition.x;
+        float endX = right.anchoredPosition.x;
+
+        // 실제 거리 계산 (절대값)
+        float width = Mathf.Abs(endX - startX);
+
+        // ⚠ 간혹 위치가 0으로 초기화된 경우가 있음 → 로그 확인
+        if (width < 1f)
+        {
+            Debug.LogWarning($"⚠ 가로줄 길이가 매우 짧음! startX={startX}, endX={endX}, width={width} → spacingX 사용 권장");
+        }
+
+        // 가로줄 프리팹 생성
+        GameObject line = Instantiate(horizontalLinePrefab, ladderParent);
+        RectTransform rt = line.GetComponent<RectTransform>();
+
+        if (rt != null)
+        {
+            // 위치 및 크기 설정
+            float yPos = LadderLayoutHelper.GetYPosition(y, stepCount, manager.stepHeight);
+            float centerX = (startX + endX) / 2f;
+
+            rt.anchoredPosition = new Vector2(centerX, yPos);
+            rt.sizeDelta = new Vector2(width, horizontalLineHeight);
+
+            // UI 기준 정렬 보정
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.localScale = Vector3.one;
+
+            // 자식 이미지 너비 보정
+            Image img = rt.GetComponentInChildren<Image>();
+            if (img != null)
+            {
+                RectTransform imgRect = img.GetComponent<RectTransform>();
+                if (imgRect != null)
+                    imgRect.sizeDelta = new Vector2(width, imgRect.sizeDelta.y);
+            }
+
+            Debug.Log($"✅ [HorizontalLine] y={y}, from x={startX} to x={endX}, width={width}");
+        }
+        else
+        {
+            Debug.LogError("🚨 가로줄 프리팹에 RectTransform이 없음");
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // ✅ X 위치 계산 함수
+    public float GetXPosition(int index)
+    {
+        if (verticalCount <= 1) return 0f;
+
+        float spacing = ladderWidth / (verticalCount - 1); // 가로 간격
+        float startX = -((verticalCount - 1) * spacing) / 2f; // 중앙 기준 시작 위치
+
+        return startX + index * spacing; // 최종 X 좌표
+    }
+
+    // ✅ Y 위치 계산 함수
+    public static float GetYPosition(int index, int stepCount, float stepHeight)
+    {
+        float offset = (stepCount - 1) * stepHeight * 0.5f;
+        return -index * stepHeight + offset;
+    }
+
+
 
     public LadderGenerator(LadderManager manager)
     {
@@ -54,74 +248,88 @@ public class LadderGenerator
     }
 
     /// <summary>
-    /// ladderMap 초기화 후, 가로줄을 아래 기준에 따라 설정:
-    /// 1. 모든 인접 세로줄 쌍(x)에 대해 최소 1개씩 가로줄 보장
-    /// 2. 추가로 horizontalLineCount를 만족할 때까지 랜덤 생성 (겹침 방지 포함)
+    /// 사다리 가로줄 생성 함수 (보장 + 추가 랜덤 포함)
+    /// - verticalCount: 세로줄 개수
+    /// - stepCount: 층 수 (Y 방향 개수)
+    /// - horizontalLineCount: 총 가로줄 목표 수 (randomize=false일 때 사용됨)
+    /// - randomize: true면 랜덤 개수 생성, false면 고정 개수 생성
     /// </summary>
     private void SetupHorizontalLines(int verticalCount, int stepCount, int horizontalLineCount, bool randomize)
     {
+        // 1. ladderMap 배열 초기화
+        //    [층 수, 세로줄 사이 개수]로 구성
         ladderMap = new bool[stepCount, verticalCount - 1];
 
-        //Debug.Log("[Ladder] 최소 보장 가로줄 생성 시작");
+        // 2. 동일한 Y 좌표에 중복 배치되지 않도록 추적할 Set
+        HashSet<int> usedYPositions = new HashSet<int>();
 
-        // 1. 모든 세로줄 쌍(x)에 대해 1개 이상 보장
+        // 3. 각 세로줄 쌍(x)에 대해 최소 하나의 가로줄을 보장
         for (int x = 0; x < verticalCount - 1; x++)
         {
             bool placed = false;
-            int attempts = 0;
-            while (!placed && attempts < stepCount * 2)
+            int attempt = 0;
+
+            // 보장 배치 시도 최대 횟수 제한
+            while (!placed && attempt < stepCount * 2)
             {
-                int y = Random.Range(0, stepCount);
-                if (CanPlaceHorizontalLine(y, x, verticalCount))
+                int y = UnityEngine.Random.Range(0, stepCount);
+
+                // 양옆/자기 위치에 이미 존재하거나 y값이 중복되면 배치 불가
+                if (CanPlaceHorizontalLine(y, x, verticalCount) && !usedYPositions.Contains(y))
                 {
-                    ladderMap[y, x] = true;
-                    //Debug.Log($"[보장 생성] x={x}, y={y}");
-                    placed = true;
+                    ladderMap[y, x] = true;               // 맵에 등록
+                    usedYPositions.Add(y);                // y값 중복 방지
+                    CreateHorizontalLine(y, x);           // 실제 UI 생성
+                    placed = true;                        // 배치 성공
                 }
-                attempts++;
+
+                attempt++;
             }
 
+            // 만약 너무 많은 시도에도 실패했다면 강제 배치 (예외 상황 대비)
             if (!placed)
             {
-                Debug.LogWarning($"[실패] x={x}에 보장용 가로줄 배치 실패");
+                int fallbackY = UnityEngine.Random.Range(0, stepCount);
+                ladderMap[fallbackY, x] = true;
+                usedYPositions.Add(fallbackY);
+                CreateHorizontalLine(fallbackY, x);
+                Debug.LogWarning($"⚠️ [강제 배치] x={x}, y={fallbackY}");
             }
         }
 
-        // 최소 보장한 개수
-        int guaranteedLines = verticalCount - 1;
+        // 4. 최소 보장된 개수 계산
+        int guaranteedCount = verticalCount - 1;
 
-        // 2. 추가 가로줄 생성 (랜덤 or 고정)
-        int additionalCount = randomize
-            ? Mathf.Max(0, Random.Range(0, verticalCount + 4) - guaranteedLines)
-            : Mathf.Max(0, horizontalLineCount - guaranteedLines);
+        // 5. 총 목표 가로줄 수 결정
+        int targetCount = randomize
+            ? UnityEngine.Random.Range(guaranteedCount, guaranteedCount + 4) // [세로-1 ~ 세로+3]
+            : Mathf.Clamp(horizontalLineCount, guaranteedCount, stepCount * (verticalCount - 1));
 
-        //Debug.Log($"[Ladder] 추가 가로줄 생성 시도: {additionalCount}개");
-
+        // 6. 추가 생성할 개수
+        int extraToCreate = targetCount - guaranteedCount;
         int created = 0;
-        int maxTries = additionalCount * 10;
-        int tries = 0;
+        int safety = 1000; // 무한 루프 방지
 
-        while (created < additionalCount && tries < maxTries)
+        // 7. 추가 가로줄 생성 루프
+        while (created < extraToCreate && safety-- > 0)
         {
-            int x = Random.Range(0, verticalCount - 1);
-            int y = Random.Range(0, stepCount);
+            int y = UnityEngine.Random.Range(0, stepCount);
+            int x = UnityEngine.Random.Range(0, verticalCount - 1);
 
-            if (CanPlaceHorizontalLine(y, x, verticalCount))
-            {
-                ladderMap[y, x] = true;
-                created++;
-                //Debug.Log($"[추가 생성] x={x}, y={y}");
-            }
+            // 중복, 인접 금지, y 충돌 방지
+            if (ladderMap[y, x]) continue;
+            if (!CanPlaceHorizontalLine(y, x, verticalCount)) continue;
+            if (usedYPositions.Contains(y)) continue;
 
-            tries++;
+            ladderMap[y, x] = true;
+            usedYPositions.Add(y);
+            CreateHorizontalLine(y, x);
+            created++;
         }
 
-        if (created < additionalCount)
-        {
-            //Debug.LogWarning($"[추가 생성 중단] 목표 {additionalCount}개 중 {created}개만 생성됨");
-        }
+        // 8. 디버그 로그로 결과 확인
+        Debug.Log($"✅ SetupHorizontalLines 완료: 총 {guaranteedCount + created}개 생성됨 (보장 {guaranteedCount}, 추가 {created})");
     }
-
 
     /// <summary>
     /// 이전에 생성된 오브젝트를 모두 제거하고 상태 초기화
@@ -137,66 +345,77 @@ public class LadderGenerator
     }
 
     /// <summary>
-    /// 세로줄(Vertical Line)을 골 버튼 위치 대신, 사다리 간격 기준으로 정확하게 배치하는 함수
-    /// - 골 버튼 위치 참조 없이 자체 spacing 계산으로 위치 결정
-    /// - 항상 수학적으로 중앙 정렬되며, 재호출 시에도 일관된 결과 보장
+    /// 세로줄(Vertical Line)을 사다리 중앙 기준으로 균등하게 배치하는 함수
+    /// - 프리팹을 이용해 verticalCount 개수만큼 세로줄 UI를 생성
+    /// - ladderWidth를 기준으로 좌우 간격을 계산하여 X 위치 설정
+    /// - 생성된 RectTransform 리스트를 LadderManager에 전달
+    /// - 세로줄 생성 후 도착/출발 버튼도 배치 (좌표 참조 위함)
     /// </summary>
     private void CreateVerticalLines(int verticalCount, int stepCount)
     {
+        // 매니저나 필수 프리팹이 지정되지 않은 경우 조기 종료
         if (manager == null || manager.verticalLinePrefab == null || manager.ladderRoot == null)
             return;
 
-        // 사다리 전체 높이 계산 (step 수 × 높이)
+        // 전체 사다리 높이 계산 (step 수 × 층 높이)
         float totalHeight = stepCount * manager.stepHeight;
 
-        // 가로 간격 계산 (세로줄 간격)
-        float spacingX = LadderLayoutHelper.CalculateSpacingX(ladderWidth, verticalCount);
-        
-        // 🔽 여기에 삽입
-        Debug.Log($"[spacingX 계산] ladderWidth={ladderWidth}, verticalCount={verticalCount}, spacingX={spacingX}");
+        // 세로줄 간 간격 계산 (전체 너비를 verticalCount 기준으로 나눔)
+        float spacingX = LadderLayoutHelper.CalculateSpacingX(manager.ladderWidth, verticalCount);
 
-        // 중앙 기준 offset (예: 3개일 경우 -1, 0, 1 위치)
+        // 시작 X 위치: 중앙 정렬을 위해 왼쪽에서 시작하는 오프셋 계산
         float startX = -((verticalCount - 1) * spacingX) / 2f;
 
-        verticalLines = new List<GameObject>();
+        // 기존 세로줄 리스트 초기화 (RectTransform 기준)
+        verticalLines = new List<RectTransform>();
 
+        // verticalCount만큼 세로줄 생성
         for (int i = 0; i < verticalCount; i++)
         {
-            GameObject line = GameObject.Instantiate(manager.verticalLinePrefab, manager.ladderRoot);
+            // 1. 프리팹으로 세로줄 UI 오브젝트 생성 (ladderRoot의 자식으로)
+            GameObject line = UnityEngine.Object.Instantiate(manager.verticalLinePrefab, manager.ladderRoot);
+
+            // 2. RectTransform 컴포넌트 가져오기 (UI 전용 위치 설정 위함)
             RectTransform rect = line.GetComponent<RectTransform>();
 
             if (rect != null)
             {
-                // 위치 계산: 정해진 간격대로 배치
+                // 3. 정확한 X 좌표 계산 (간격 * 인덱스 + 시작 위치)
                 float posX = startX + i * spacingX;
-                rect.anchoredPosition = new Vector2(posX, 0f); // Y는 0으로 중앙 기준 고정
+                Debug.Log($"[VerticalLine #{i}] posX={posX}");
 
-                // 세로줄 길이 설정
+                // 4. 세로줄의 위치 및 크기 설정 (Y는 중앙 기준)
+                rect.anchoredPosition = new Vector2(posX, 0f); // 중앙 기준 Y 위치
                 rect.sizeDelta = new Vector2(rect.sizeDelta.x, totalHeight);
 
-                // UI 오브젝트 정렬 기준 통일 (중앙 anchor/pivot)
-                rect.anchorMin = new Vector2(0.5f, 0.5f);
-                rect.anchorMax = new Vector2(0.5f, 0.5f);
-                rect.pivot = new Vector2(0.5f, 0.5f);
+                // 5. UI 정렬 기준 통일 (anchor, pivot 중앙)
+                rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
                 rect.localScale = Vector3.one;
 
-                //Debug.Log($"✅ [세로줄 생성] index={i}, x={posX}, height={totalHeight}");
+                // 6. 리스트에 추가
+                verticalLines.Add(rect);
+
             }
             else
             {
-                Debug.LogWarning("⚠ 세로줄 프리팹에 RectTransform 없음");
+                Debug.LogWarning("⚠ 세로줄 프리팹에 RectTransform 컴포넌트가 없습니다.");
             }
-
-            verticalLines.Add(line);
         }
 
+        // 7. 생성된 세로줄 리스트를 LadderManager에 전달
         manager.SetVerticalLines(verticalLines);
+
+        // 8. 세로줄 위치 기준으로 도착/출발 버튼도 함께 배치
+        manager.InitializeDestinationButtons(verticalCount);
+        manager.InitializeStartButtons(verticalCount);
+
+
     }
 
 
-
     /// <summary>
-    /// 가로줄을 해당 위치에 놓을 수 있는지 검사 (양 옆에 이미 가로줄이 있으면 false)
+    /// 해당 (y, x) 위치에 가로줄을 놓을 수 있는지 검사
+    /// - 왼쪽(x-1), 현재(x), 오른쪽(x+1)에 이미 줄이 있으면 안됨
     /// </summary>
     private bool CanPlaceHorizontalLine(int y, int x, int verticalCount)
     {
