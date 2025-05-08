@@ -215,48 +215,48 @@ public class LadderManager : MonoBehaviour
 
     /// <summary>
     /// 결과 버튼(GO) 클릭 시 실행
-    /// - 사다리 가로줄 생성
+    /// - 가로줄 생성 (보장된 방식)
     /// - 플레이어 생성 및 이동 시작
     /// </summary>
     public void OnResultButtonClicked()
     {
-        // 🔒 플레이어가 이미 이동 중이라면 중복 실행 방지
+        // 🔒 이미 이동 중이면 중복 실행 방지
         if (playerMover.IsMoving())
             return;
 
-        // ✅ 골 버튼을 선택하지 않은 경우 경고 메시지 출력
+        // ❗ 도착 버튼을 선택하지 않은 경우 경고 출력
         if (selectedGoalButton == null)
         {
-            if (boardText != null) boardText.text = "도착 지점을 선택하세요!";
+            if (boardText != null)
+                boardText.text = "도착 지점을 선택하세요!";
             return;
         }
 
-        // ✅ 보드 UI는 숨김
-        if (board != null) board.SetActive(false);
+        // 📕 보드 UI 비활성화
+        if (board != null)
+            board.SetActive(false);
 
-        // ⭐ 시작 위치 인덱스 결정 (선택되지 않았으면 랜덤)
+        // ⭐ 시작 위치 인덱스 결정 (선택 안 됐으면 랜덤)
         int startIndex = selectedStartIndex >= 0
             ? selectedStartIndex
             : Random.Range(0, verticalCount);
 
-        // 🔁 모든 스타트 버튼 텍스트 초기화
+        // 🧹 모든 스타트 버튼 텍스트 및 색상 초기화
         foreach (var btn in startButtons)
         {
             Text label = btn.GetComponentInChildren<Text>();
             if (label != null) label.text = "";
         }
-
-        // 🔁 모든 스타트 버튼 색상 초기화
         ResetAllStartButtonColors();
 
-        // ⭐ 랜덤 선택일 경우 버튼 하이라이트 (노란색)
+        // 🟡 랜덤 선택일 경우 노란색 하이라이트
         if (selectedStartIndex < 0 && startIndex >= 0 && startIndex < startButtons.Count)
         {
             selectedStartButton = startButtons[startIndex];
             selectedStartButton.HighlightWithColor(Color.yellow);
         }
 
-        // 🔁 기존 플레이어가 있다면 제거
+        // 🗑 기존 플레이어 제거
         if (playerTransform != null)
         {
             playerMover.StopMove(this);
@@ -264,40 +264,38 @@ public class LadderManager : MonoBehaviour
             playerTransform = null;
         }
 
-        // ✅ ladderMap 초기화 필수!! (가로줄 생성을 위해)
-        //ladderGenerator.ladderMap = new bool[stepCount, verticalCount - 1
-        // ✅ 가로줄 생성 (무작위 보장 방식)
-        //ladderGenerator.CreateHorizontalLinesWithGuarantee();
-
-        // ✅ 개선된 보장형 생성 함수로 교체
+        // ✅ 무작위 보장형 방식으로 가로줄 생성
         int min = verticalCount - 1;
         int max = verticalCount + 3;
         int horizontalLineCount = Random.Range(min, max + 1);
+
         ladderGenerator.SetupHorizontalLines(verticalCount, stepCount, horizontalLineCount, true);
 
-        // ✅ 플레이어 프리팹 존재 여부 확인
+        // 🎮 플레이어 프리팹 유효성 검사
         if (playerPrefab == null) return;
 
-        // ✅ 플레이어 생성 및 배치
+        // 🎮 플레이어 생성 및 배치
         GameObject playerGO = Instantiate(playerPrefab, ladderRoot);
         playerTransform = playerGO.transform;
 
-        float x = LadderLayoutHelper.GetXPosition(startIndex, ladderWidth, verticalCount);
-        float y = LadderLayoutHelper.GetStartY(stepCount, stepHeight);
-        RectTransform rect = playerTransform.GetComponent<RectTransform>();
+        // 정확한 위치 계산: 선택된 세로줄 최상단 (Visual 기준)
+        RectTransform verticalLine = GetVerticalLineAt(startIndex);
+        float x = verticalLine.anchoredPosition.x;
+        float y = verticalLine.anchoredPosition.y + verticalLine.sizeDelta.y / 2f;
 
+        RectTransform rect = playerTransform.GetComponent<RectTransform>();
         if (rect != null)
             rect.anchoredPosition = new Vector2(x, y);
 
-        // ✅ 플레이어 이동 시작
+        // ▶ 이동 시작 설정
         playerMover.Setup(playerTransform, startIndex, 500f);
         playerMover.SetFinishCallback(CheckResult);
         playerMover.StartMove(this);
 
-        // ✅ 결과 버튼 비활성화 (이동 중 중복 클릭 방지)
+        // 📴 결과 버튼 비활성화 (중복 클릭 방지)
         resultButton.interactable = false;
 
-        // ✅ 기대값 텍스트 숨김
+        // 🧊 기대값 텍스트 숨김
         if (rewardText != null)
             rewardText.gameObject.SetActive(false);
     }
@@ -559,7 +557,10 @@ public class LadderManager : MonoBehaviour
     /// </summary>
     public bool HasHorizontalLine(int y, int x)
     {
-        return generator.HasHorizontalLine(y, x);
+        return ladderGenerator.ladderMap != null &&
+               y >= 0 && y < ladderGenerator.ladderMap.GetLength(0) &&
+               x >= 0 && x < ladderGenerator.ladderMap.GetLength(1) &&
+               ladderGenerator.ladderMap[y, x];
     }
 
     /// <summary>

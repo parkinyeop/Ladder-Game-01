@@ -117,6 +117,7 @@ public class LadderGenerator : MonoBehaviour
                 continue;
 
             ladderMap[y, x] = true;
+            Debug.Log($"✅ [Set ladderMap] y={y}, x={x} → 가로줄 설정됨");
             CreateHorizontalLine(y, x);
             created++;
         }
@@ -228,6 +229,8 @@ public class LadderGenerator : MonoBehaviour
         // 1. 기존 오브젝트 제거
         ClearLadder();
 
+        ladderMap = new bool[stepCount, verticalCount - 1]; // ✅ 여기에서 한 번만 초기화
+
         // 2. 세로줄 생성
         CreateVerticalLines(verticalCount, stepCount);
 
@@ -256,81 +259,76 @@ public class LadderGenerator : MonoBehaviour
     /// </summary>
     public void SetupHorizontalLines(int verticalCount, int stepCount, int horizontalLineCount, bool randomize)
     {
-        ladderMap = new bool[stepCount, verticalCount - 1]; // 초기화
+        ladderMap = new bool[stepCount, verticalCount - 1]; // [층 수, 세로쌍 수]
+        HashSet<int> usedY = new HashSet<int>();             // 중복된 y 방지
+        HashSet<(int y, int x)> usedPairs = new HashSet<(int y, int x)>(); // (y,x) 중복 방지
 
-        HashSet<int> usedY = new HashSet<int>(); // y 중복 방지용
-
-        // 1. 모든 인접 세로줄 쌍(x)에 대해 최소 1개 보장
+        // 1. x(세로쌍)별로 최소 하나 보장
         for (int x = 0; x < verticalCount - 1; x++)
         {
             bool placed = false;
-            int attempt = 0;
+            int attempts = 0;
 
-            while (!placed && attempt < stepCount * 2)
+            while (!placed && attempts++ < 100)
             {
-                int y = UnityEngine.Random.Range(0, stepCount);
+                int y = Random.Range(0, stepCount);
 
-                if (usedY.Contains(y)) { attempt++; continue; }
+                if (usedPairs.Contains((y, x)) || usedY.Contains(y))
+                    continue;
+
                 if (CanPlaceHorizontalLine(y, x, verticalCount))
                 {
                     ladderMap[y, x] = true;
-                    CreateHorizontalLine(y, x);
+                    usedPairs.Add((y, x));
                     usedY.Add(y);
+                    CreateHorizontalLine(y, x);
                     placed = true;
                 }
-
-                attempt++;
             }
 
             if (!placed)
-            {
-                Debug.LogWarning($"⚠️ 최소 보장 실패: x={x}");
-            }
+                Debug.LogWarning($"⚠️ x={x} 위치에 가로줄 보장 실패");
         }
 
-        // 2. 추가 가로줄 생성 (무작위)
+        // 2. 추가 줄 생성 (총합이 horizontalLineCount가 되도록)
         int guaranteed = verticalCount - 1;
         int additional = Mathf.Max(0, horizontalLineCount - guaranteed);
+
         int created = 0;
-        int maxTries = additional * 10;
         int tries = 0;
+        int maxTries = additional * 10;
 
         while (created < additional && tries++ < maxTries)
         {
-            int x = UnityEngine.Random.Range(0, verticalCount - 1);
-            int y = UnityEngine.Random.Range(0, stepCount);
+            int x = Random.Range(0, verticalCount - 1);
+            int y = Random.Range(0, stepCount);
 
-            if (usedY.Contains(y)) continue;
+            if (usedPairs.Contains((y, x)) || usedY.Contains(y))
+                continue;
+
             if (CanPlaceHorizontalLine(y, x, verticalCount))
             {
                 ladderMap[y, x] = true;
-                CreateHorizontalLine(y, x);
+                usedPairs.Add((y, x));
                 usedY.Add(y);
+                CreateHorizontalLine(y, x);
                 created++;
             }
         }
 
         if (created < additional)
+            Debug.LogWarning($"⚠️ 추가 가로줄 부족: {created}/{additional}");
+
+        // 최종 디버그 출력
+        for (int y = 0; y < stepCount; y++)
         {
-            Debug.LogWarning($"⚠️ 추가 생성 부족: 목표 {additional} 중 {created}만 생성됨");
+            string row = $"[ladderMap] y={y} : ";
+            for (int x = 0; x < verticalCount - 1; x++)
+                row += (ladderMap[y, x] ? "1 " : "0 ");
+            Debug.Log(row);
         }
     }
 
-    /// <summary>
-    /// 오버로드: 가로줄 개수와 무작위 여부를 조절할 수 있는 SetupHorizontalLines
-    /// → 내부적으로 무작위 생성만 처리 가능 (randomize = true인 경우만 처리됨)
-    /// </summary>
-    //public void SetupHorizontalLines(int verticalCount, int stepCount, int horizontalLineCount, bool randomize)
-    //{
-    //    if (randomize)
-    //    {
-    //        SetupHorizontalLines(verticalCount, stepCount); // 기존 무작위 로직 재사용
-    //    }
-    //    else
-    //    {
-    //        Debug.LogWarning("현재는 randomize=false (고정 방식)는 지원하지 않습니다.");
-    //    }
-    //}
 
     /// <summary>
     /// 사용되지 않은 Y 좌표를 반환. 사용된 적이 있으면 다시 랜덤.

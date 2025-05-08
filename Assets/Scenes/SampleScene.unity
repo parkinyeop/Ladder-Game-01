@@ -1406,6 +1406,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 633376387}
+  - component: {fileID: 633376388}
   m_Layer: 5
   m_Name: LadderRoot
   m_TagString: Untagged
@@ -1433,6 +1434,25 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &633376388
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 633376386}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc70c38f93d8542ae9943fdf5b751038, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  verticalLinePrefab: {fileID: 8855487372191584192, guid: 33cbecac2d2d443ecbb7dde8f81997fe, type: 3}
+  ladderParent: {fileID: 633376387}
+  horizontalLinePrefab: {fileID: 7092793000497595691, guid: 99259ddaa2f3d4448b52276fee0f3464, type: 3}
+  spacingX: 0
+  spacingY: 0
+  horizontalLineHeight: 0
+  verticalLines: []
 --- !u!1 &703945183
 GameObject:
   m_ObjectHideFlags: 0
@@ -3335,6 +3355,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 233ab6836a8cf472a8dcd8762fb7f79d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ladderGenerator: {fileID: 633376388}
   goalMultiplierFactor: 0.9
   startMultiplierFactor: 0.9
   verticalCount: 3
