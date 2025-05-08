@@ -135,6 +135,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   startIndex: 0
+  multiplierText: {fileID: 313196463506234072}
 --- !u!1 &3037846751850030697
 GameObject:
   m_ObjectHideFlags: 0

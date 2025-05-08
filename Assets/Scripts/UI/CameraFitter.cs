@@ -4,7 +4,7 @@ public class CameraFitter : MonoBehaviour
 {
     public LadderManager ladderManager;
     public Camera mainCamera;
-    public float targetAspectRatio = 1920f / 1080f; // 목표 화면 비율
+    public float targetAspectRatio = 9f / 16f; // 목표 화면 비율
     public float horizontalMarginPercent = 0.1f; // 가로 여백 비율 (양쪽 5%씩)
     public float verticalMarginPercent = 0.05f; // 세로 여백 비율 (위아래 2.5%씩)
 

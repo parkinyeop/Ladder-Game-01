@@ -21,6 +21,8 @@ public class StartBettingButton : MonoBehaviour
     private static readonly Color DimColor = Color.gray;
     private static readonly Color DefaultColor = Color.white;
 
+    [SerializeField] private Text multiplierText; // UI Text를 인스펙터에서 할당
+
     private void Start()
     {
         button = GetComponent<Button>();
@@ -100,5 +102,14 @@ public class StartBettingButton : MonoBehaviour
 
         if (button != null)
             button.interactable = interactable;
+    }
+
+    /// <summary>
+    /// 스타트 버튼 배율 텍스트 설정 (예: 2.7x)
+    /// </summary>
+    public void SetMultiplier(float goalMultiplier, float startMultiplier)
+    {
+        float total = goalMultiplier * startMultiplier;
+        multiplierText.text = total.ToString("0.0") + "x"; // 소수점 1자리까지 표시
     }
 }
