@@ -265,10 +265,15 @@ public class LadderManager : MonoBehaviour
         }
 
         // ✅ ladderMap 초기화 필수!! (가로줄 생성을 위해)
-        ladderGenerator.ladderMap = new bool[stepCount, verticalCount - 1];
-
+        //ladderGenerator.ladderMap = new bool[stepCount, verticalCount - 1
         // ✅ 가로줄 생성 (무작위 보장 방식)
-        ladderGenerator.CreateHorizontalLinesWithGuarantee();
+        //ladderGenerator.CreateHorizontalLinesWithGuarantee();
+
+        // ✅ 개선된 보장형 생성 함수로 교체
+        int min = verticalCount - 1;
+        int max = verticalCount + 3;
+        int horizontalLineCount = Random.Range(min, max + 1);
+        ladderGenerator.SetupHorizontalLines(verticalCount, stepCount, horizontalLineCount, true);
 
         // ✅ 플레이어 프리팹 존재 여부 확인
         if (playerPrefab == null) return;
@@ -296,6 +301,7 @@ public class LadderManager : MonoBehaviour
         if (rewardText != null)
             rewardText.gameObject.SetActive(false);
     }
+
     /// <summary>
     /// 플레이어 도착 후 성공 여부 판단 및 보상 처리
     /// </summary>
@@ -360,12 +366,6 @@ public class LadderManager : MonoBehaviour
             rewardText.gameObject.SetActive(false);
         }
     }
-
-    //private void HideResultUI()
-    //{
-    //    if (successUI != null) successUI.SetActive(false);
-    //    if (failUI != null) failUI.SetActive(false);
-    //}
 
     /// <summary>
     /// 모든 골 버튼을 활성화 또는 비활성화

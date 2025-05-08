@@ -89,13 +89,14 @@ public class LadderGenerator : MonoBehaviour
 
         manager.SetVerticalLines(verticalLines);
     }
+
     // ---------------------------------------------------------------------
     // ✅ 가로줄을 생성하는 함수 (GO 버튼 누를 때 호출)
     public void CreateHorizontalLinesWithGuarantee()
     {
         int min = verticalCount - 1;
         int max = verticalCount + 3;
-        int horizontalLineCount = Random.Range(min, max + 1);
+        int horizontalLineCount = Random.Range(min, max + 1); // int형 생성
 
         int created = 0;
         int safety = 1000; // 무한 루프 방지용
@@ -248,87 +249,106 @@ public class LadderGenerator : MonoBehaviour
     }
 
     /// <summary>
-    /// 사다리 가로줄 생성 함수 (보장 + 추가 랜덤 포함)
-    /// - verticalCount: 세로줄 개수
-    /// - stepCount: 층 수 (Y 방향 개수)
-    /// - horizontalLineCount: 총 가로줄 목표 수 (randomize=false일 때 사용됨)
-    /// - randomize: true면 랜덤 개수 생성, false면 고정 개수 생성
+    /// ladderMap 초기화 후, 가로줄을 다음 기준으로 설정:
+    /// 1. 모든 인접 세로줄 쌍(x)에 대해 최소 1개 이상 가로줄 보장
+    /// 2. 추가로 horizontalLineCount를 만족할 때까지 무작위로 생성 (겹침 방지 포함)
+    /// 3. y값은 중복되지 않도록 처리
     /// </summary>
-    private void SetupHorizontalLines(int verticalCount, int stepCount, int horizontalLineCount, bool randomize)
+    public void SetupHorizontalLines(int verticalCount, int stepCount, int horizontalLineCount, bool randomize)
     {
-        // 1. ladderMap 배열 초기화
-        //    [층 수, 세로줄 사이 개수]로 구성
-        ladderMap = new bool[stepCount, verticalCount - 1];
+        ladderMap = new bool[stepCount, verticalCount - 1]; // 초기화
 
-        // 2. 동일한 Y 좌표에 중복 배치되지 않도록 추적할 Set
-        HashSet<int> usedYPositions = new HashSet<int>();
+        HashSet<int> usedY = new HashSet<int>(); // y 중복 방지용
 
-        // 3. 각 세로줄 쌍(x)에 대해 최소 하나의 가로줄을 보장
+        // 1. 모든 인접 세로줄 쌍(x)에 대해 최소 1개 보장
         for (int x = 0; x < verticalCount - 1; x++)
         {
             bool placed = false;
             int attempt = 0;
 
-            // 보장 배치 시도 최대 횟수 제한
             while (!placed && attempt < stepCount * 2)
             {
                 int y = UnityEngine.Random.Range(0, stepCount);
 
-                // 양옆/자기 위치에 이미 존재하거나 y값이 중복되면 배치 불가
-                if (CanPlaceHorizontalLine(y, x, verticalCount) && !usedYPositions.Contains(y))
+                if (usedY.Contains(y)) { attempt++; continue; }
+                if (CanPlaceHorizontalLine(y, x, verticalCount))
                 {
-                    ladderMap[y, x] = true;               // 맵에 등록
-                    usedYPositions.Add(y);                // y값 중복 방지
-                    CreateHorizontalLine(y, x);           // 실제 UI 생성
-                    placed = true;                        // 배치 성공
+                    ladderMap[y, x] = true;
+                    CreateHorizontalLine(y, x);
+                    usedY.Add(y);
+                    placed = true;
                 }
 
                 attempt++;
             }
 
-            // 만약 너무 많은 시도에도 실패했다면 강제 배치 (예외 상황 대비)
             if (!placed)
             {
-                int fallbackY = UnityEngine.Random.Range(0, stepCount);
-                ladderMap[fallbackY, x] = true;
-                usedYPositions.Add(fallbackY);
-                CreateHorizontalLine(fallbackY, x);
-                Debug.LogWarning($"⚠️ [강제 배치] x={x}, y={fallbackY}");
+                Debug.LogWarning($"⚠️ 최소 보장 실패: x={x}");
             }
         }
 
-        // 4. 최소 보장된 개수 계산
-        int guaranteedCount = verticalCount - 1;
-
-        // 5. 총 목표 가로줄 수 결정
-        int targetCount = randomize
-            ? UnityEngine.Random.Range(guaranteedCount, guaranteedCount + 4) // [세로-1 ~ 세로+3]
-            : Mathf.Clamp(horizontalLineCount, guaranteedCount, stepCount * (verticalCount - 1));
-
-        // 6. 추가 생성할 개수
-        int extraToCreate = targetCount - guaranteedCount;
+        // 2. 추가 가로줄 생성 (무작위)
+        int guaranteed = verticalCount - 1;
+        int additional = Mathf.Max(0, horizontalLineCount - guaranteed);
         int created = 0;
-        int safety = 1000; // 무한 루프 방지
+        int maxTries = additional * 10;
+        int tries = 0;
 
-        // 7. 추가 가로줄 생성 루프
-        while (created < extraToCreate && safety-- > 0)
+        while (created < additional && tries++ < maxTries)
         {
-            int y = UnityEngine.Random.Range(0, stepCount);
             int x = UnityEngine.Random.Range(0, verticalCount - 1);
+            int y = UnityEngine.Random.Range(0, stepCount);
 
-            // 중복, 인접 금지, y 충돌 방지
-            if (ladderMap[y, x]) continue;
-            if (!CanPlaceHorizontalLine(y, x, verticalCount)) continue;
-            if (usedYPositions.Contains(y)) continue;
-
-            ladderMap[y, x] = true;
-            usedYPositions.Add(y);
-            CreateHorizontalLine(y, x);
-            created++;
+            if (usedY.Contains(y)) continue;
+            if (CanPlaceHorizontalLine(y, x, verticalCount))
+            {
+                ladderMap[y, x] = true;
+                CreateHorizontalLine(y, x);
+                usedY.Add(y);
+                created++;
+            }
         }
 
-        // 8. 디버그 로그로 결과 확인
-        Debug.Log($"✅ SetupHorizontalLines 완료: 총 {guaranteedCount + created}개 생성됨 (보장 {guaranteedCount}, 추가 {created})");
+        if (created < additional)
+        {
+            Debug.LogWarning($"⚠️ 추가 생성 부족: 목표 {additional} 중 {created}만 생성됨");
+        }
+    }
+
+    /// <summary>
+    /// 오버로드: 가로줄 개수와 무작위 여부를 조절할 수 있는 SetupHorizontalLines
+    /// → 내부적으로 무작위 생성만 처리 가능 (randomize = true인 경우만 처리됨)
+    /// </summary>
+    //public void SetupHorizontalLines(int verticalCount, int stepCount, int horizontalLineCount, bool randomize)
+    //{
+    //    if (randomize)
+    //    {
+    //        SetupHorizontalLines(verticalCount, stepCount); // 기존 무작위 로직 재사용
+    //    }
+    //    else
+    //    {
+    //        Debug.LogWarning("현재는 randomize=false (고정 방식)는 지원하지 않습니다.");
+    //    }
+    //}
+
+    /// <summary>
+    /// 사용되지 않은 Y 좌표를 반환. 사용된 적이 있으면 다시 랜덤.
+    /// stepCount 범위 내에서 시도하며, 실패 시 -1 반환.
+    /// </summary>
+    private int GetUniqueY(int stepCount, HashSet<int> usedY)
+    {
+        const int maxAttempts = 100;
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            int y = Random.Range(0, stepCount);
+            if (!usedY.Contains(y))
+            {
+                usedY.Add(y);
+                return y;
+            }
+        }
+        return -1; // 더 이상 사용할 수 있는 Y가 없음
     }
 
     /// <summary>
