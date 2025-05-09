@@ -120,7 +120,7 @@ public class BetAmountUIManager : MonoBehaviour
     private void UpdateBetAmountText()
     {
         if (betAmountText != null)
-            betAmountText.text = $"베팅: {betAmount} 코인";
+            betAmountText.text = $"Betting: {betAmount} Coins";
 
         // 금액이 0이면 골 버튼 비활성화
         if (ladderManager != null)

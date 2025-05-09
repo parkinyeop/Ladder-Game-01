@@ -1,44 +1,45 @@
 using UnityEngine;
-using UnityEngine.UI; // ✅ UI 요소 (Text, Image, Button)를 위한 네임스페이스
+using UnityEngine.UI;
+using TMPro; // ✅ TextMeshPro 사용을 위해 추가
 
 /// <summary>
 /// ResultUIManager
-/// - 성공/실패 결과를 팝업으로 보여주는 UI 매니저
+/// - 성공/실패 결과를 팝업으로 보여주는 UI 매니저 (TextMeshPro 적용됨)
 /// </summary>
 public class ResultUIManager : MonoBehaviour
 {
     [Header("UI 연결")]
-    public GameObject resultPanel;      // 결과 패널 (처음엔 꺼져 있음)
-    public Text resultMessageText;             // 결과 메시지 텍스트
-    public Button closeButton;          // 닫기 버튼
+    public GameObject resultPanel;                // 결과 표시용 패널 (비활성화 상태로 시작)
+    public TextMeshProUGUI resultMessageText;     // ✅ 결과 메시지를 보여줄 TMP 텍스트
+    public Button closeButton;                    // 닫기 버튼
 
-    [SerializeField] private LadderManager ladderManager;
+    [SerializeField] private LadderManager ladderManager; // 사다리 매니저 참조 (다음 라운드 준비용)
 
     private void Start()
     {
-        // 초기에는 패널 비활성화
+        // ✅ 시작 시 결과 패널은 비활성화
         if (resultPanel != null)
             resultPanel.SetActive(false);
 
-        // 닫기 버튼 연결
+        // ✅ 닫기 버튼 클릭 시 Hide 함수 연결
         if (closeButton != null)
             closeButton.onClick.AddListener(Hide);
     }
 
     /// <summary>
-    /// 결과 UI 표시
+    /// 결과 메시지를 설정하고 패널을 표시함
     /// </summary>
     public void ShowResult(string message)
     {
         if (resultPanel != null)
-            resultPanel.SetActive(true); // ✅ 결과 판넬 보이게
+            resultPanel.SetActive(true);
 
         if (resultMessageText != null)
-            resultMessageText.text = message;
+            resultMessageText.text = message; // ✅ TMP 텍스트에 메시지 표시
     }
 
     /// <summary>
-    /// 결과 UI 닫기
+    /// 결과 패널 숨김 처리
     /// </summary>
     public void Hide()
     {
@@ -46,20 +47,23 @@ public class ResultUIManager : MonoBehaviour
             resultPanel.SetActive(false);
     }
 
+    /// <summary>
+    /// 닫기 버튼 클릭 시 호출되는 함수
+    /// - 사다리 UI를 초기화하고, 배팅 UI를 다시 활성화
+    /// </summary>
     public void OnCloseResult()
     {
-        // ✅ 결과창 숨기기
-        resultPanel.SetActive(false);
+        if (resultPanel != null)
+            resultPanel.SetActive(false);
 
-        // ✅ 사다리 매니저가 연결되어 있는지 확인
+        // ✅ 사다리 매니저가 연결되어 있다면 다음 라운드 초기화
         if (ladderManager != null)
         {
             Debug.Log("🟢 OnCloseResult(): GenerateLadder 호출됨");
 
-            // 🔄 사다리 다시 생성 (다음 라운드 시작)
             ladderManager.GenerateLadder();
 
-            // ✅ 배팅 UI 다시 활성화
+            // ✅ 배팅 UI도 다시 활성화
             if (ladderManager.betAmountUIManager != null)
             {
                 ladderManager.betAmountUIManager.SetInteractable(true);

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro; // ✅ TMP를 사용하기 위한 네임스페이스 추가
+
 
 /// <summary>
 /// StartBettingButton
@@ -21,7 +23,7 @@ public class StartBettingButton : MonoBehaviour
     private static readonly Color DimColor = Color.gray;
     private static readonly Color DefaultColor = Color.white;
 
-    [SerializeField] private Text multiplierText; // UI Text를 인스펙터에서 할당
+    [SerializeField] private TMP_Text multiplierText; // ✅ Text → TMP_Text로 변경
 
     private void Start()
     {
@@ -43,7 +45,7 @@ public class StartBettingButton : MonoBehaviour
         if (!ladderManager.IsGoalSelected())
         {
             Debug.LogWarning("⚠ 먼저 골 지점을 선택해주세요.");
-            ladderManager.ShowResultMessage("⚠ 도착 지점을 먼저 선택하세요.");
+            ladderManager.ShowResultMessage("FIRST, CHART YOUR COURSE!");
             return;
         }
 

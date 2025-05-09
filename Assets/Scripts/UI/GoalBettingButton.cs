@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro; // ✅ TextMeshPro 사용을 위한 네임스페이스 추가
 
 /// <summary>
 /// GoalBettingButton
@@ -9,78 +10,97 @@ using UnityEngine.UI;
 /// </summary>
 public class GoalBettingButton : MonoBehaviour
 {
-    public int destinationIndex;
+    public int destinationIndex; // 이 버튼이 나타내는 도착 지점 인덱스
 
-    [Header("배당률 출력용 텍스트")]
-    public Text multiplierText; // 🎯 2X, 3X 등 표시
+    [Header("배당률 출력용 TMP 텍스트")]
+    public TMP_Text multiplierText; // 🎯 2.7X, 3.0X 등 출력용 TextMeshPro 텍스트
 
     private Button button;
     private LadderManager ladderManager;
 
-    private static readonly Color HighlightColor = new Color(0.2f, 0.8f, 0.4f);
-    private static readonly Color DimColor = new Color(0.7f, 0.7f, 0.7f);
-    private static readonly Color DefaultColor = Color.white;
+    // 버튼 색상 상태 정의
+    private static readonly Color HighlightColor = new Color(0.2f, 0.8f, 0.4f); // 강조색
+    private static readonly Color DimColor = new Color(0.7f, 0.7f, 0.7f);        // 비활성화 색
+    private static readonly Color DefaultColor = Color.white;                  // 기본색
 
     private void Start()
     {
+        // 버튼 컴포넌트 및 LadderManager 찾아 연결
         button = GetComponent<Button>();
         ladderManager = FindObjectOfType<LadderManager>();
 
+        // 클릭 이벤트 연결
         if (button != null)
             button.onClick.AddListener(SelectDestination);
     }
 
+    /// <summary>
+    /// 이 골 버튼이 클릭되었을 때 LadderManager에 알림
+    /// </summary>
     private void SelectDestination()
     {
         if (ladderManager != null)
         {
-            ladderManager.SetSelectedDestination(destinationIndex);
-            ladderManager.HighlightSelectedGoalButton(this);
+            ladderManager.SetSelectedDestination(destinationIndex); // 선택 처리
+            ladderManager.HighlightSelectedGoalButton(this);        // 시각적 하이라이트
         }
     }
 
+    /// <summary>
+    /// 기본 노란색으로 하이라이트
+    /// </summary>
     public void Highlight()
     {
         if (button != null && button.targetGraphic != null)
             button.targetGraphic.color = Color.yellow;
     }
 
-    // ✅ 특정 색상으로 강조할 수 있는 함수 추가
+    /// <summary>
+    /// 특정 색상으로 하이라이트 적용
+    /// </summary>
     public void HighlightWithColor(Color color)
     {
         if (button != null && button.targetGraphic != null)
             button.targetGraphic.color = color;
     }
 
+    /// <summary>
+    /// 버튼을 흐리게 표시 (선택되지 않았을 때)
+    /// </summary>
     public void Dim()
     {
         if (button != null && button.targetGraphic != null)
             button.targetGraphic.color = DimColor;
     }
 
+    /// <summary>
+    /// 버튼 색상과 텍스트 표시 복원
+    /// </summary>
     public void ResetColor()
     {
-        if (GetComponent<Button>()?.targetGraphic != null)
+        if (button?.targetGraphic != null)
         {
-            GetComponent<Button>().targetGraphic.color = Color.white; // 기본 색상으로 복원
+            button.targetGraphic.color = DefaultColor;
         }
 
-        // 텍스트도 다시 보이게
         SetTextVisible(true);
     }
 
+    /// <summary>
+    /// 배율 텍스트 설정 (예: 2.7X)
+    /// </summary>
     public void SetMultiplierText(float multiplier)
     {
-        Text label = GetComponentInChildren<Text>();
-        if (label != null)
-            label.text = $"{multiplier:F1}X"; // 소수점 1자리로 출력
-    }
-       
-    public void SetTextVisible(bool isVisible)
-    {
-        Text label = GetComponentInChildren<Text>();
-        if (label != null)
-            label.enabled = isVisible;
+        if (multiplierText != null)
+            multiplierText.text = $"{multiplier:F1}X"; // 소수점 1자리
     }
 
+    /// <summary>
+    /// 텍스트 표시 여부 설정
+    /// </summary>
+    public void SetTextVisible(bool isVisible)
+    {
+        if (multiplierText != null)
+            multiplierText.enabled = isVisible;
+    }
 }

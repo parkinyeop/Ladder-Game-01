@@ -695,7 +695,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   resultPanel: {fileID: 114883834}
-  resultMessageText: {fileID: 0}
+  resultMessageText: {fileID: 247864926}
   closeButton: {fileID: 1792847165}
   ladderManager: {fileID: 2022045316}
 --- !u!224 &125955359 stripped
@@ -3191,7 +3191,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   destinationIndex: 0
-  multiplierText: {fileID: 0}
+  multiplierText: {fileID: 1693455579}
 --- !u!114 &1124056847
 MonoBehaviour:
   m_ObjectHideFlags: 0

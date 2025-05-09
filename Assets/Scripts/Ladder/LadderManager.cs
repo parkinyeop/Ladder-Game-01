@@ -167,7 +167,7 @@ public class LadderManager : MonoBehaviour
 
         // ✅ 보드 UI 활성화 및 안내 메시지 출력
         if (board != null) board.SetActive(true);
-        if (boardText != null) boardText.text = "도착 지점을 선택하세요!";
+        if (boardText != null) boardText.text = "PINPOINT YOUR JOURNEY'S END!!";
 
         // ✅ 배팅 금액이 설정되지 않은 경우 결과 버튼 비활성화
         int currentBet = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0;
@@ -207,7 +207,7 @@ public class LadderManager : MonoBehaviour
         if (selectedGoalButton == null)
         {
             if (boardText != null)
-                boardText.text = "도착 지점을 선택하세요!";
+                boardText.text = "PINPOINT YOUR JOURNEY'S END!";
             return;
         }
 
@@ -313,7 +313,7 @@ public class LadderManager : MonoBehaviour
             if (!isSuccess)
                 reward = 0f; // ⛔ 실패 시 보상은 0
 
-            string message = isSuccess ? $"🎉 성공! 보상 {reward}코인" : $"❌ 실패! 다시 도전해주세";
+            string message = isSuccess ? $"🎉 YOU DID IT! Claim your {reward} Coins" : $"❌ OH NO! Better luck next time!";
             resultUIManager.ShowResult(message); // ✅ 결과창 호출
 
             // ✅ 보유 코인 업데이트
@@ -430,7 +430,7 @@ public class LadderManager : MonoBehaviour
             float goalMultiplier = verticalCount * goalMultiplierFactor;     // 예: 3×0.9 = 2.7
             float expectedReward = betAmount * goalMultiplier;
 
-            rewardText.text = $"기대값: {expectedReward:F1} 코인";
+            rewardText.text = $"Expected: {expectedReward:F1} Coins";
             rewardText.gameObject.SetActive(true);
         }
     }
@@ -450,7 +450,7 @@ public class LadderManager : MonoBehaviour
         {
             if (selectedGoalButton == null)
             {
-                if (boardText != null) boardText.text = "도착 지점을 선택하세요!";
+                if (boardText != null) boardText.text = "CHOOSE YOUR DESTINATION!";
                 return;
             }
 
@@ -553,7 +553,7 @@ public class LadderManager : MonoBehaviour
     private void UpdateVerticalCountText()
     {
         if (verticalCountText != null)
-            verticalCountText.text = $"세로줄 개수: {verticalCount}";
+            verticalCountText.text = $"Vewrtical Lines Count: {verticalCount}";
     }
 
     private void IncreaseVerticalCount()
@@ -651,7 +651,7 @@ public class LadderManager : MonoBehaviour
                 float goalFactor = goalMultiplierFactor;
                 float multiplier = verticalCount * goalFactor;
                 int bet = betAmountUIManager.GetBetAmount();
-                rewardText.text = $"기대값: {(bet * multiplier):F1} 코인";
+                rewardText.text = $"Expected: {(bet * multiplier):F1} Coins";
             }
 
             return;
@@ -674,7 +674,7 @@ public class LadderManager : MonoBehaviour
             float sFactor = startMultiplierFactor;
             float multiplier = gFactor * sFactor * (verticalCount * verticalCount);
             int bet = betAmountUIManager.GetBetAmount();
-            rewardText.text = $"기대값: {(bet * multiplier):F1} 코인";
+            rewardText.text = $"Expected: {(bet * multiplier):F1} Coins";
         }
 
         // ✅ 텍스트도 해당 배율로 업데이트
@@ -803,7 +803,7 @@ public class LadderManager : MonoBehaviour
         if (betAmount <= 0)
         {
             resultButton.interactable = false;
-            if (boardText != null) boardText.text = "배팅 금액을 설정하세요!";
+            if (boardText != null) boardText.text = "SET YOUR STAKES!";
             return;
         }
 
@@ -881,7 +881,7 @@ public class LadderManager : MonoBehaviour
     private void UpdateCoinUI()
     {
         if (coinTextUI != null)
-            coinTextUI.text = $"코인: {currentCoin:F1}";
+            coinTextUI.text = $"Coins: {currentCoin:F1}";
     }
 
     // ✅ 정확한 함수 정의 예시
