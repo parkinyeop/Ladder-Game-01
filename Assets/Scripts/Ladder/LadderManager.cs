@@ -437,13 +437,20 @@ public class LadderManager : MonoBehaviour
 
     public void OnResultButtonPressed()
     {
-        
-        string label = resultButton.GetComponentInChildren<Text>().text;
+        // TMP 컴포넌트 가져오기
+        var labelComponent = resultButton.GetComponentInChildren<TextMeshProUGUI>();
+        if (labelComponent == null)
+        {
+            Debug.LogError("❌ resultButton에 TextMeshProUGUI가 연결되어 있지 않습니다.");
+            return;
+        }
+
+        string label = labelComponent.text;
 
         if (label == "READY")
         {
             GenerateLadder(); // 사다리 및 UI 생성
-            resultButton.GetComponentInChildren<Text>().text = "GO"; // 상태 전환
+            labelComponent.text = "GO"; // ✅ 상태 전환 (TMP 기준)
             isLadderGenerated = true;
         }
         else if (label == "GO")
@@ -461,15 +468,10 @@ public class LadderManager : MonoBehaviour
             // 결과 실행
             OnResultButtonClicked();
 
-            resultButton.GetComponentInChildren<Text>().text = "WAIT"; // ✅ 다음 라운드까지 대기
-
-            // 완료 후 버튼을 다시 READY로 되돌리기
-            resultButton.GetComponentInChildren<Text>().text = "READY";
+            // 상태 변화 처리
+            labelComponent.text = "WAIT";
+            labelComponent.text = "READY";
             isLadderGenerated = false;
-
-            // 초기화
-            //ResetAllGoalButtonColors();
-            //ResetAllStartButtonColors();
         }
     }
 
@@ -814,8 +816,8 @@ public class LadderManager : MonoBehaviour
 
     public bool IsInReadyState()
     {
-        var text = resultButton?.GetComponentInChildren<Text>();
-        return text != null && text.text == "READY";
+        var tmp = resultButton?.GetComponentInChildren<TextMeshProUGUI>();
+        return tmp != null && tmp.text == "READY";
     }
 
     public void SetMultiplierText(int multiplier)
@@ -838,7 +840,7 @@ public class LadderManager : MonoBehaviour
 
         foreach (var btn in startButtons)
         {
-            Text label = btn.GetComponentInChildren<Text>();
+            TextMeshProUGUI label = btn.GetComponentInChildren<TextMeshProUGUI>();
             if (label != null)
             {
                 label.text = $"{multiplier:F1}X";
@@ -850,9 +852,12 @@ public class LadderManager : MonoBehaviour
     {
         if (resultButton != null)
         {
-            resultButton.GetComponentInChildren<Text>().text = state;
+            // ✅ Text → TextMeshProUGUI로 교체
+            TextMeshProUGUI label = resultButton.GetComponentInChildren<TextMeshProUGUI>();
+            if (label != null)
+                label.text = state;
 
-            // "READY" 상태가 아니면 버튼도 비활성화
+            // 상태에 따라 버튼 비활성화 처리
             resultButton.interactable = (state == "READY" || state == "GO");
         }
     }
