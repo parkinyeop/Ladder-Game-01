@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using System.Collections.Generic;
 
 /// <summary>
@@ -31,12 +32,12 @@ public class LadderManager : MonoBehaviour
     [Header("UI 연결")]
     public Button generateButton;
     public Button resultButton;
-    public Text resultText;
+    public TMP_Text resultText;
 
     [Header("보드 UI")]
     public GameObject board;               // 보드 패널
-    public Text boardText;                // 보드 내 메시지 출력용 텍스트
-    public Text rewardText;
+    public TMP_Text boardText;
+    public TMP_Text rewardText;
 
     [Header("결과 처리 UI")]
     public ResultUIManager resultUIManager; // 결과 처리 통합 관리자
@@ -47,8 +48,8 @@ public class LadderManager : MonoBehaviour
     public Button increaseHorizontalButton;
     public Button decreaseHorizontalButton;
     public Toggle randomizeToggle;
-    public Text verticalCountText;
-    public Text horizontalLineCountText;
+    public TMP_Text verticalCountText;
+    public TMP_Text horizontalLineCountText;
 
     [Header("프리팹 및 부모")]
     public Transform ladderRoot;                // 사다리 줄들의 부모 오브젝트
@@ -67,7 +68,7 @@ public class LadderManager : MonoBehaviour
 
     [Header("코인 관련")]
     public float currentCoin = 100; // 기본 보유 코인
-    public Text coinTextUI;       // 인스펙터에서 연결할 텍스트 오브젝트
+    public TMP_Text coinTextUI;       // 인스펙터에서 연결할 텍스트 오브젝트
 
     private LadderGenerator generator;          // 사다리 생성기
     //private PlayerMover playerMover;            // 플레이어 이동기
@@ -90,59 +91,37 @@ public class LadderManager : MonoBehaviour
 
     private void Start()
     {
-        // ✅ LadderGenerator와 PlayerMover는 반드시 여기서 초기화되어야 함
         generator = new LadderGenerator(this);
         playerMover = new PlayerMover(this);
 
-        // ✅ 인스펙터 연결 확인
-        if (generateButton == null) Debug.LogError("🚨 generateButton이 연결되지 않았습니다.");
-        if (resultButton == null) Debug.LogError("🚨 resultButton이 연결되지 않았습니다.");
-        if (resultUIManager == null) Debug.LogWarning("⚠ resultUIManager가 연결되지 않았습니다.");
-        if (ladderRoot == null) Debug.LogError("🚨 ladderRoot가 연결되지 않았습니다.");
-        if (verticalLinePrefab == null) Debug.LogError("🚨 verticalLinePrefab이 연결되지 않았습니다.");
-        if (horizontalLinePrefab == null) Debug.LogError("🚨 horizontalLinePrefab이 연결되지 않았습니다.");
-        if (startButtonPrefab == null) Debug.LogError("🚨 startButtonPrefab이 연결되지 않았습니다.");
-        if (startButtonsParent == null) Debug.LogError("🚨 startButtonsParent가 연결되지 않았습니다.");
-        if (destinationButtonPrefab == null) Debug.LogError("🚨 destinationButtonPrefab이 연결되지 않았습니다.");
-        if (destinationButtonsParent == null) Debug.LogError("🚨 destinationButtonsParent가 연결되지 않았습니다.");
+        if (generateButton == null) Debug.LogError("🚨 generateButton 연결 오류");
+        if (resultButton == null) Debug.LogError("🚨 resultButton 연결 오류");
+        if (ladderRoot == null) Debug.LogError("🚨 ladderRoot 연결 오류");
+        if (startButtonPrefab == null || startButtonsParent == null) Debug.LogError("🚨 Start 버튼 관련 프리팹 누락");
+        if (destinationButtonPrefab == null || destinationButtonsParent == null) Debug.LogError("🚨 Destination 버튼 프리팹 누락");
 
-        // ✅ 시작 시 결과 UI 비활성화
-        if (resultUIManager != null)
-            resultUIManager.Hide(); // resultPanel은 내부에서 관리
+        if (resultUIManager != null) resultUIManager.Hide();
 
-        // ✅ 배팅 금액 UI 연결 상태 확인
         if (betAmountUIManager != null)
-        {
             betAmountUIManager.OnBetConfirmed += OnBetConfirmedHandler;
-        }
         else
-        {
-            Debug.LogError("🚨 BetAmountUIManager가 연결되지 않았습니다.");
-        }
+            Debug.LogError("🚨 BetAmountUIManager 연결 안됨");
 
-        // ✅ 버튼 이벤트 연결
         SetupUI();
-        if (generateButton != null)
-            generateButton.onClick.AddListener(GenerateLadder);
-        if (resultButton != null)
-            resultButton.onClick.AddListener(OnResultButtonPressed);
+        generateButton?.onClick.AddListener(GenerateLadder);
+        resultButton?.onClick.AddListener(OnResultButtonPressed);
 
-        // ✅ UI 텍스트 초기화
         UpdateVerticalCountText();
         UpdateHorizontalLineCountText();
 
         if (resultButton != null)
         {
-            var txt = resultButton.GetComponentInChildren<Text>();
-            if (txt != null)
-                txt.text = "READY";
+            TMP_Text txt = resultButton.GetComponentInChildren<TMP_Text>();
+            if (txt != null) txt.text = "READY";
             resultButton.interactable = false;
         }
 
-        // ✅ 시작 시 코인 UI 표시
         UpdateCoinUI();
-
-        // 🔥 MonoBehaviour에선 생성자 X → 별도 초기화 함수 사용
         ladderGenerator.Initialize(this);
     }
 
@@ -571,7 +550,11 @@ public class LadderManager : MonoBehaviour
         verticalLines = lines;
     }
 
-    
+    private void UpdateVerticalCountText()
+    {
+        if (verticalCountText != null)
+            verticalCountText.text = $"세로줄 개수: {verticalCount}";
+    }
 
     private void IncreaseVerticalCount()
     {
@@ -620,12 +603,6 @@ public class LadderManager : MonoBehaviour
         int min = verticalCount - 1;
         int max = verticalCount + 3;
         horizontalLineCount = Mathf.Clamp(horizontalLineCount, min, max);
-    }
-
-    private void UpdateVerticalCountText()
-    {
-        if (verticalCountText != null)
-            verticalCountText.text = $"세로줄 개수: {verticalCount}";
     }
 
     private void UpdateHorizontalLineCountText()
@@ -821,9 +798,8 @@ public class LadderManager : MonoBehaviour
     // ✅ BetAmountUIManager에서 배팅 확정되었을 때 호출되는 핸들러
     private void OnBetConfirmedHandler(int betAmount)
     {
-        Debug.Log($"💰 배팅 금액 확정됨: {betAmount}원");
+        Debug.Log($"💰 배팅 확정: {betAmount} 코인");
 
-        // 금액이 0이면 결과 버튼 비활성화
         if (betAmount <= 0)
         {
             resultButton.interactable = false;
@@ -831,12 +807,9 @@ public class LadderManager : MonoBehaviour
             return;
         }
 
-        // 금액이 1 이상이면 준비 상태로 전환
         resultButton.interactable = true;
-        resultButton.GetComponentInChildren<Text>().text = "READY";
-
-        // 예시: 확인 버튼 활성화, 로그 표시 등 필요한 로직 여기에 작성
-        // resultButton.interactable = true;
+        var txt = resultButton.GetComponentInChildren<TMP_Text>();
+        if (txt != null) txt.text = "READY";
     }
 
     public bool IsInReadyState()
