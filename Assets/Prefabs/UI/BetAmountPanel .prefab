@@ -2545,7 +2545,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   betSlider: {fileID: 4952764177230716162}
-  betAmountText: {fileID: 0}
+  betAmountText: {fileID: 8808501355561705765}
   bet1Button: {fileID: 1041028140153925819}
   bet5Button: {fileID: 4887866486356662155}
   bet10Button: {fileID: 8442741785719834654}

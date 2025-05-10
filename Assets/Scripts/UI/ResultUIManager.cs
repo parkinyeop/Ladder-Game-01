@@ -36,6 +36,7 @@ public class ResultUIManager : MonoBehaviour
 
         if (resultMessageText != null)
             resultMessageText.text = message; // ✅ TMP 텍스트에 메시지 표시
+        resultMessageText.gameObject.SetActive(true);
     }
 
     /// <summary>

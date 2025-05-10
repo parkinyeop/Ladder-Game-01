@@ -322,7 +322,7 @@ public class LadderManager : MonoBehaviour
             if (!isSuccess)
                 reward = 0f; // ⛔ 실패 시 보상은 0
 
-            string message = isSuccess ? $"🎉 YOU DID IT! Claim your {reward} Coins" : $"❌ OH NO! Better luck next time!";
+            string message = isSuccess ? $"YOU DID IT! Claim your {reward} Coins" : $"OH NO! Better luck next time!";
             resultUIManager.ShowResult(message); // ✅ 결과창 호출
 
             // ✅ 보유 코인 업데이트
@@ -895,7 +895,7 @@ public class LadderManager : MonoBehaviour
     private void UpdateCoinUI()
     {
         if (coinTextUI != null)
-            coinTextUI.text = $"Coins: {currentCoin:F1}";
+            coinTextUI.text = $"Balance: {currentCoin:F1}";
     }
 
     // ✅ 정확한 함수 정의 예시
