@@ -83,6 +83,8 @@ public class LadderManager : MonoBehaviour
     public Transform startButtonsParent;             // 출발 버튼들을 담을 부모 오브젝트
 
     [SerializeField] private BetAmountUIManager betUIManager;
+    [SerializeField] private TextMeshProUGUI resultButtonLabel;
+
     public BetAmountUIManager betAmountUIManager;
 
     private bool isLadderGenerated = false;  // READY 상태 → GO 상태 전환 여부
@@ -107,6 +109,10 @@ public class LadderManager : MonoBehaviour
         else
             Debug.LogError("🚨 BetAmountUIManager 연결 안됨");
 
+        // 혹시 인스펙터에 연결 안 했으면 자동 연결 시도
+        if (resultButtonLabel == null)
+            resultButtonLabel = resultButton.GetComponentInChildren<TextMeshProUGUI>();
+
         SetupUI();
         generateButton?.onClick.AddListener(GenerateLadder);
         resultButton?.onClick.AddListener(OnResultButtonPressed);
@@ -120,6 +126,9 @@ public class LadderManager : MonoBehaviour
             if (txt != null) txt.text = "READY";
             resultButton.interactable = false;
         }
+
+        if (ladderGenerator == null)
+            ladderGenerator = new LadderGenerator(this);
 
         UpdateCoinUI();
         ladderGenerator.Initialize(this);
@@ -174,7 +183,7 @@ public class LadderManager : MonoBehaviour
         resultButton.interactable = (currentBet > 0);
 
         // ✅ 결과 버튼 텍스트 초기화 ("READY")
-        resultButton.GetComponentInChildren<Text>().text = "READY";
+        resultButton.GetComponentInChildren<TextMeshProUGUI>().text = "READY";
 
         // ✅ 스타트 버튼은 아직 선택할 수 없도록 비활성화
         SetStartButtonsInteractable(false);
@@ -329,7 +338,7 @@ public class LadderManager : MonoBehaviour
 
         // ✅ 결과 버튼 다시 활성화 및 텍스트 복구
         resultButton.interactable = true;
-        resultButton.GetComponentInChildren<Text>().text = "READY";
+        resultButton.GetComponentInChildren<TextMeshProUGUI>().text = "READY";
 
         // ✅ 다음 라운드를 위해 배팅 UI 다시 활성화
         if (betAmountUIManager != null)
