@@ -45,9 +45,9 @@ public class LadderManager : MonoBehaviour
     [Header("세로/가로줄 수 조절 UI")]
     public Button increaseVerticalButton;
     public Button decreaseVerticalButton;
-    public Button increaseHorizontalButton;
-    public Button decreaseHorizontalButton;
-    public Toggle randomizeToggle;
+    //public Button increaseHorizontalButton;
+    //public Button decreaseHorizontalButton;
+    //public Toggle randomizeToggle;
     public TMP_Text verticalCountText;
     public TMP_Text horizontalLineCountText;
 
@@ -96,7 +96,7 @@ public class LadderManager : MonoBehaviour
         generator = new LadderGenerator(this);
         playerMover = new PlayerMover(this);
 
-        if (generateButton == null) Debug.LogError("🚨 generateButton 연결 오류");
+        //if (generateButton == null) Debug.LogError("🚨 generateButton 연결 오류");
         if (resultButton == null) Debug.LogError("🚨 resultButton 연결 오류");
         if (ladderRoot == null) Debug.LogError("🚨 ladderRoot 연결 오류");
         if (startButtonPrefab == null || startButtonsParent == null) Debug.LogError("🚨 Start 버튼 관련 프리팹 누락");
@@ -147,9 +147,9 @@ public class LadderManager : MonoBehaviour
     {
         increaseVerticalButton?.onClick.AddListener(IncreaseVerticalCount);
         decreaseVerticalButton?.onClick.AddListener(DecreaseVerticalCount);
-        increaseHorizontalButton?.onClick.AddListener(IncreaseHorizontalLineCount);
-        decreaseHorizontalButton?.onClick.AddListener(DecreaseHorizontalLineCount);
-        randomizeToggle?.onValueChanged.AddListener(OnRandomizeToggleChanged);
+        //increaseHorizontalButton?.onClick.AddListener(IncreaseHorizontalLineCount);
+        //decreaseHorizontalButton?.onClick.AddListener(DecreaseHorizontalLineCount);
+        //randomizeToggle?.onValueChanged.AddListener(OnRandomizeToggleChanged);
     }
 
     /// <summary>
@@ -180,7 +180,27 @@ public class LadderManager : MonoBehaviour
 
         // ✅ 배팅 금액이 설정되지 않은 경우 결과 버튼 비활성화
         int currentBet = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0;
-        resultButton.interactable = (currentBet > 0);
+
+        if (currentBet <= 0)
+        {
+            // ✅ 배팅 금액이 0이면 결과 버튼 비활성화
+            resultButton.interactable = false;
+
+            // ✅ 보드 텍스트에 안내 메시지 출력
+            if (boardText != null)
+                boardText.text = "SET YOUR BET AMOUNT!";
+        }
+        else
+        {
+            // ✅ 배팅 금액이 설정되어 있으면 결과 버튼 활성화
+            resultButton.interactable = true;
+
+            // ✅ 보드 텍스트 초기 메시지 출력
+            if (boardText != null)
+                boardText.text = "PINPOINT YOUR JOURNEY'S END!!";
+        }
+
+        //resultButton.interactable = (currentBet > 0);
 
         // ✅ 결과 버튼 텍스트 초기화 ("READY")
         resultButton.GetComponentInChildren<TextMeshProUGUI>().text = "READY";
@@ -520,6 +540,10 @@ public class LadderManager : MonoBehaviour
             Destroy(child.gameObject);
         destinationButtons.Clear();
 
+        // 🔽 골 버튼의 Y 위치 계산: 사다리 맨 아래 기준
+        float bottomY = LadderLayoutHelper.GetYPosition(stepCount, stepCount, stepHeight);
+        float goalButtonY = bottomY - 100f; // 약간 아래에 위치 (100f는 여백)
+
         for (int i = 0; i < verticalCount; i++)
         {
             // 프리팹 생성
@@ -528,7 +552,8 @@ public class LadderManager : MonoBehaviour
             // 위치 계산 및 배치
             RectTransform rect = buttonGO.GetComponent<RectTransform>();
             float x = LadderLayoutHelper.GetXPosition(i, ladderWidth, verticalCount);
-            rect.anchoredPosition = new Vector2(x, -300f);
+            //rect.anchoredPosition = new Vector2(x, -300f);
+            rect.anchoredPosition = new Vector2(x, goalButtonY); // 🔁 고정값 -300f → 계산된 Y값 사용
 
             // 컴포넌트 설정
             GoalBettingButton btn = buttonGO.GetComponent<GoalBettingButton>();
@@ -727,7 +752,11 @@ public class LadderManager : MonoBehaviour
             Destroy(child.gameObject);
         startButtons.Clear();
 
-        float buttonY = 300f;
+        //float buttonY = 300f;
+        // ✅ 사다리의 맨 위 Y 위치를 계산하여 약간 위에 버튼 배치
+        float topY = LadderLayoutHelper.GetYPosition(0, stepCount, stepHeight);
+        float buttonY = topY + 100f; // 위쪽 여백 추가
+
 
         // ✅ 세로줄의 RectTransform 기준으로 직접 위치 참조
         for (int i = 0; i < verticalCount; i++)

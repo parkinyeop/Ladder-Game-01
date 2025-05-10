@@ -36,7 +36,11 @@ public class ResultUIManager : MonoBehaviour
 
         if (resultMessageText != null)
             resultMessageText.text = message; // ✅ TMP 텍스트에 메시지 표시
-        resultMessageText.gameObject.SetActive(true);
+
+        // ✅ 결과 버튼 비활성화
+        if (ladderManager != null && ladderManager.resultButton != null)
+            ladderManager.resultButton.interactable = false;
+
     }
 
     /// <summary>
@@ -57,10 +61,15 @@ public class ResultUIManager : MonoBehaviour
         if (resultPanel != null)
             resultPanel.SetActive(false);
 
+        // ✅ 결과 버튼 다시 활성화
+        if (ladderManager != null && ladderManager.resultButton != null)
+            ladderManager.resultButton.interactable = true;
+
+
         // ✅ 사다리 매니저가 연결되어 있다면 다음 라운드 초기화
         if (ladderManager != null)
         {
-            Debug.Log("🟢 OnCloseResult(): GenerateLadder 호출됨");
+            Debug.Log("OnCloseResult(): GenerateLadder 호출됨");
 
             ladderManager.GenerateLadder();
 
@@ -72,7 +81,11 @@ public class ResultUIManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("❌ LadderManager가 연결되지 않았습니다.");
+            Debug.LogError("LadderManager가 연결되지 않았습니다.");
         }
+
+        // ✅ 배팅 UI 다시 사용 가능
+        if (ladderManager?.betAmountUIManager != null)
+            ladderManager.betAmountUIManager.SetInteractable(true);
     }
 }
