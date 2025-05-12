@@ -3317,7 +3317,7 @@ MonoBehaviour:
   resultText: {fileID: 281681353}
   board: {fileID: 223561529}
   boardText: {fileID: 1693455579}
-  rewardText: {fileID: 247864926}
+  rewardText: {fileID: 1693455579}
   resultUIManager: {fileID: 114883838}
   resultMessageText: {fileID: 247864926}
   increaseVerticalButton: {fileID: 1995110168}
