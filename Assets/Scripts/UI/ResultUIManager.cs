@@ -78,6 +78,10 @@ public class ResultUIManager : MonoBehaviour
             {
                 ladderManager.betAmountUIManager.SetInteractable(true);
             }
+
+            // ✅ 보드 텍스트 강제 활성화
+            if (ladderManager.boardText != null)
+                ladderManager.boardText.gameObject.SetActive(true);
         }
         else
         {

@@ -41,6 +41,7 @@ public class LadderManager : MonoBehaviour
 
     [Header("결과 처리 UI")]
     public ResultUIManager resultUIManager; // 결과 처리 통합 관리자
+    public TMP_Text resultMessageText;      // 🔴 결과 메시지용
 
     [Header("세로/가로줄 수 조절 UI")]
     public Button increaseVerticalButton;
@@ -182,7 +183,11 @@ public class LadderManager : MonoBehaviour
 
         // ✅ 보드 UI 활성화 및 안내 메시지 출력
         if (board != null) board.SetActive(true);
-        if (boardText != null) boardText.text = "CHOOSE YOUR DESTINATION!!";
+        if (boardText != null)
+        {
+            boardText.gameObject.SetActive(true);     // ⬅ 반드시 추가
+            boardText.text = "CHOOSE YOUR DESTINATION!";
+        }
 
         // ✅ 배팅 금액이 설정되지 않은 경우 결과 버튼 비활성화
         int currentBet = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0;
@@ -824,8 +829,15 @@ public class LadderManager : MonoBehaviour
     /// </summary>
     public void ShowResultMessage(string message)
     {
-        if (resultText != null)
-            resultText.text = message;
+        if (resultMessageText != null)
+            resultMessageText.text = message;
+
+        if (resultMessageText != null)
+        {
+            resultMessageText.text = message;
+            resultMessageText.gameObject.SetActive(true);     // ⬅ 텍스트 오브젝트 활성화
+            resultMessageText.color = new Color(1, 1, 1, 1);      // ⬅ 알파값 보정
+        }
     }
 
     /// <summary>
@@ -846,23 +858,38 @@ public class LadderManager : MonoBehaviour
     {
         Debug.Log($"💰 배팅 확정: {betAmount} 코인");
 
+        // ✅ 보드 텍스트 오브젝트가 비활성화되어 있으면 강제로 켜줌
+        if (boardText != null && !boardText.gameObject.activeInHierarchy)
+        {
+            boardText.gameObject.SetActive(true); // 🔧 이 줄 추가
+            Debug.Log("✅ boardText 오브젝트를 강제로 활성화했습니다.");
+        }
+
+        // 결과 버튼 텍스트 컴포넌트 가져오기
+        var txt = resultButton.GetComponentInChildren<TextMeshProUGUI>();
+
         if (betAmount <= 0)
         {
+            // ❌ 배팅 금액이 없으면 결과 버튼 비활성화 + 경고 메시지
             resultButton.interactable = false;
-            if (boardText != null) boardText.text = "INPUT YOUR BET AMOUNT.";
+
+            if (boardText != null)
+                boardText.text = "INPUT YOUR BET AMOUNT.";
+
+            if (txt != null)
+                txt.text = "DISABLED"; // 선택 사항: 시각적으로도 강조
+
             return;
         }
-        else
-        {
-            resultButton.interactable = true;
-            resultButton.GetComponentInChildren<TextMeshProUGUI>().text = "READY";
 
-            if (boardText != null) boardText.text = "CHOOSE YOUR DESTINATION!";
-        }
-
+        // ✅ 배팅 금액이 있으면 결과 버튼 활성화 및 초기 메시지 설정
         resultButton.interactable = true;
-        var txt = resultButton.GetComponentInChildren<TMP_Text>();
-        if (txt != null) txt.text = "READY";
+
+        if (txt != null)
+            txt.text = "READY";
+
+        if (boardText != null)
+            boardText.text = "CHOOSE YOUR DESTINATION!";
     }
 
     public bool IsInReadyState()
