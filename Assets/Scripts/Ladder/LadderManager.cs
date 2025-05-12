@@ -132,6 +132,10 @@ public class LadderManager : MonoBehaviour
 
         UpdateCoinUI();
         ladderGenerator.Initialize(this);
+
+        // ✅ 시작 시 보드 활성화 및 안내 메시지 출력
+        if (board != null) board.SetActive(true);
+        if (boardText != null) boardText.text = "INPUT YOUR BET AMOUNT.";
     }
 
     private void OnBetAmountConfirmed(int amount)
@@ -176,7 +180,7 @@ public class LadderManager : MonoBehaviour
 
         // ✅ 보드 UI 활성화 및 안내 메시지 출력
         if (board != null) board.SetActive(true);
-        if (boardText != null) boardText.text = "PINPOINT YOUR JOURNEY'S END!!";
+        if (boardText != null) boardText.text = "CHOOSE YOUR DESTINATION!!";
 
         // ✅ 배팅 금액이 설정되지 않은 경우 결과 버튼 비활성화
         int currentBet = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0;
@@ -197,7 +201,7 @@ public class LadderManager : MonoBehaviour
 
             // ✅ 보드 텍스트 초기 메시지 출력
             if (boardText != null)
-                boardText.text = "PINPOINT YOUR JOURNEY'S END!!";
+                boardText.text = "CHOOSE YOUR DESTINATION!!";
         }
 
         //resultButton.interactable = (currentBet > 0);
@@ -236,7 +240,7 @@ public class LadderManager : MonoBehaviour
         if (selectedGoalButton == null)
         {
             if (boardText != null)
-                boardText.text = "PINPOINT YOUR JOURNEY'S END!";
+                boardText.text = "CHOOSE YOUR DESTINATION!";
             return;
         }
 
@@ -843,8 +847,15 @@ public class LadderManager : MonoBehaviour
         if (betAmount <= 0)
         {
             resultButton.interactable = false;
-            if (boardText != null) boardText.text = "SET YOUR STAKES!";
+            if (boardText != null) boardText.text = "INPUT YOUR BET AMOUNT.";
             return;
+        }
+        else
+        {
+            resultButton.interactable = true;
+            resultButton.GetComponentInChildren<TextMeshProUGUI>().text = "READY";
+
+            if (boardText != null) boardText.text = "CHOOSE YOUR DESTINATION!";
         }
 
         resultButton.interactable = true;
