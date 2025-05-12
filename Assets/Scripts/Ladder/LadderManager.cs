@@ -73,6 +73,7 @@ public class LadderManager : MonoBehaviour
     private LadderGenerator generator;          // 사다리 생성기
     //private PlayerMover playerMover;            // 플레이어 이동기
     private GameObject spawnedPlayer;           // 현재 생성된 플레이어 오브젝트
+    private List<Button> betButtons = new(); // 모든 배팅 버튼을 리스트로 관리
 
     private GoalBettingButton selectedGoalButton = null;                // 선택된 골 버튼 참조
     private List<GoalBettingButton> destinationButtons = new();        // 모든 골 버튼 리스트
@@ -109,6 +110,7 @@ public class LadderManager : MonoBehaviour
         else
             Debug.LogError("🚨 BetAmountUIManager 연결 안됨");
 
+        
         // 혹시 인스펙터에 연결 안 했으면 자동 연결 시도
         if (resultButtonLabel == null)
             resultButtonLabel = resultButton.GetComponentInChildren<TextMeshProUGUI>();
@@ -943,4 +945,5 @@ public class LadderManager : MonoBehaviour
     {
         return verticalLines;
     }
+
 }

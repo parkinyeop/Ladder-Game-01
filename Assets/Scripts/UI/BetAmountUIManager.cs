@@ -48,7 +48,17 @@ public class BetAmountUIManager : MonoBehaviour
             betSlider.onValueChanged.AddListener(OnSliderValueChanged);
         }
 
-        // ✅ 각 프리셋 버튼 클릭 시 배팅 금액 설정
+        //// ✅ 각 프리셋 버튼 클릭 시 배팅 금액 설정
+        //if (bet1Button != null) bet1Button.onClick.AddListener(() => SetBetAmount(1));
+        //if (bet5Button != null) bet5Button.onClick.AddListener(() => SetBetAmount(5));
+        //if (bet10Button != null) bet10Button.onClick.AddListener(() => SetBetAmount(10));
+        //if (bet50Button != null) bet50Button.onClick.AddListener(() => SetBetAmount(50));
+        //if (bet100Button != null) bet100Button.onClick.AddListener(() => SetBetAmount(100));
+
+        // ✅ 버튼 등록
+        betButtons.AddRange(new[] { bet1Button, bet5Button, bet10Button, bet50Button, bet100Button });
+
+        // 각 버튼에 리스너 등록
         if (bet1Button != null) bet1Button.onClick.AddListener(() => SetBetAmount(1));
         if (bet5Button != null) bet5Button.onClick.AddListener(() => SetBetAmount(5));
         if (bet10Button != null) bet10Button.onClick.AddListener(() => SetBetAmount(10));
@@ -97,12 +107,27 @@ public class BetAmountUIManager : MonoBehaviour
 
         UpdateBetAmountText();
 
-        // 배팅 금액 > 0 && READY 상태일 경우에만 결과 버튼 활성화
+        // 🎯 버튼 색상 처리 (텍스트 파싱 없이 명시적 비교)
+        foreach (var btn in betButtons)
+        {
+            if (btn == bet1Button && amount == 1)
+                btn.GetComponent<Image>().color = Color.yellow;
+            else if (btn == bet5Button && amount == 5)
+                btn.GetComponent<Image>().color = Color.yellow;
+            else if (btn == bet10Button && amount == 10)
+                btn.GetComponent<Image>().color = Color.yellow;
+            else if (btn == bet50Button && amount == 50)
+                btn.GetComponent<Image>().color = Color.yellow;
+            else if (btn == bet100Button && amount == 100)
+                btn.GetComponent<Image>().color = Color.yellow;
+            else
+                btn.GetComponent<Image>().color = Color.white;
+        }
+
+        // 결과 버튼 활성화 조건
         if (ladderManager != null && ladderManager.IsInReadyState())
         {
-            bool shouldEnable = betAmount > 0;
-            ladderManager.resultButton.interactable = shouldEnable;
-            Debug.Log($"🟡 결과 버튼 활성화 여부: {shouldEnable}");
+            ladderManager.resultButton.interactable = (betAmount > 0);
         }
     }
 
