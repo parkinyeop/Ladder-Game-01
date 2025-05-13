@@ -19,8 +19,18 @@ public class BetButton : MonoBehaviour
             btn.onClick.AddListener(() =>
             {
                 BetAmountUIManager manager = FindObjectOfType<BetAmountUIManager>();
-                if (manager != null)
+
+                // ✅ 보유 금액보다 높은 경우 클릭 무시
+                if (manager != null && manager.ladderManager != null)
                 {
+                    float currentCoin = manager.ladderManager.currentCoin;
+
+                    if (betAmount > currentCoin)
+                    {
+                        Debug.LogWarning($"🚫 {betAmount} 코인 버튼 클릭 무시됨 (보유: {currentCoin})");
+                        return; // 무시 처리
+                    }
+
                     manager.SetBetAmount(betAmount);
                 }
             });

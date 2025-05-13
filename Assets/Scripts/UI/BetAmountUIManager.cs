@@ -48,13 +48,6 @@ public class BetAmountUIManager : MonoBehaviour
             betSlider.onValueChanged.AddListener(OnSliderValueChanged);
         }
 
-        //// ✅ 각 프리셋 버튼 클릭 시 배팅 금액 설정
-        //if (bet1Button != null) bet1Button.onClick.AddListener(() => SetBetAmount(1));
-        //if (bet5Button != null) bet5Button.onClick.AddListener(() => SetBetAmount(5));
-        //if (bet10Button != null) bet10Button.onClick.AddListener(() => SetBetAmount(10));
-        //if (bet50Button != null) bet50Button.onClick.AddListener(() => SetBetAmount(50));
-        //if (bet100Button != null) bet100Button.onClick.AddListener(() => SetBetAmount(100));
-
         // ✅ 버튼 등록
         betButtons.AddRange(new[] { bet1Button, bet5Button, bet10Button, bet50Button, bet100Button });
 
@@ -153,6 +146,30 @@ public class BetAmountUIManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 보유 코인에 따라 퀵 배팅 버튼 활성/비활성 처리
+    /// </summary>
+    public void UpdateQuickBetButtons(float currentCoin)
+    {
+        foreach (var btn in betButtons)
+        {
+            if (btn == null) continue;
+
+            int value = 0;
+
+            if (btn == bet1Button) value = 1;
+            else if (btn == bet5Button) value = 5;
+            else if (btn == bet10Button) value = 10;
+            else if (btn == bet50Button) value = 50;
+            else if (btn == bet100Button) value = 100;
+
+            bool enable = value <= currentCoin;
+            btn.interactable = enable;
+
+            Debug.Log($"   ▶ 버튼 {value} → {(enable ? "활성화" : "비활성화")}");
+        }
+    }
+
+    /// <summary>
     /// UI 활성/비활성 설정 (슬라이더 및 버튼들)
     /// </summary>
     public void SetInteractable(bool isInteractable)
@@ -164,4 +181,6 @@ public class BetAmountUIManager : MonoBehaviour
         if (bet50Button != null) bet50Button.interactable = isInteractable;
         if (bet100Button != null) bet100Button.interactable = isInteractable;
     }
+
+
 }

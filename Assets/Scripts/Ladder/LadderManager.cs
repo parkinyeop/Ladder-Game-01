@@ -140,11 +140,11 @@ public class LadderManager : MonoBehaviour
         if (boardText != null) boardText.text = "INPUT YOUR BET AMOUNT.";
     }
 
-    private void OnBetAmountConfirmed(int amount)
-    {
-        Debug.Log($"💰 확정된 배팅 금액: {amount}");
-        // 내부 게임 로직에서 활용
-    }
+    //private void OnBetAmountConfirmed(int amount)
+    //{
+    //    Debug.Log($"💰 확정된 배팅 금액: {amount}");
+    //    // 내부 게임 로직에서 활용
+    //}
 
     /// <summary>
     /// 버튼 및 토글과 이벤트 연결 초기화
@@ -971,8 +971,12 @@ public class LadderManager : MonoBehaviour
     /// </summary>
     public void SetCoin(float amount)
     {
-        currentCoin = Mathf.Max(0, amount); // 음수 방지
+        currentCoin = Mathf.Max(0, amount);
         UpdateCoinUI();
+
+        // 🔄 퀵 배팅 버튼 업데이트
+        if (betAmountUIManager != null)
+            betAmountUIManager.UpdateQuickBetButtons(currentCoin);
     }
 
     /// <summary>
@@ -980,8 +984,12 @@ public class LadderManager : MonoBehaviour
     /// </summary>
     public void AddCoin(float amount)
     {
-        currentCoin = Mathf.Max(0, currentCoin + amount); // 음수 방지
+        currentCoin = Mathf.Max(0, currentCoin + amount);
         UpdateCoinUI();
+
+        // 🔄 퀵 배팅 버튼 업데이트
+        if (betAmountUIManager != null)
+            betAmountUIManager.UpdateQuickBetButtons(currentCoin);
     }
 
     /// <summary>
@@ -1035,4 +1043,5 @@ public class LadderManager : MonoBehaviour
 
         resultButton.interactable = isInteractable;
     }
+       
 }
