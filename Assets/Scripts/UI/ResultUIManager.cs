@@ -53,43 +53,46 @@ public class ResultUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 닫기 버튼 클릭 시 호출되는 함수
-    /// - 사다리 UI를 초기화하고, 배팅 UI를 다시 활성화
+    /// 결과 패널의 닫기 버튼 클릭 시 호출되는 함수
+    /// - 결과 패널을 숨기고
+    /// - 다음 라운드를 위해 사다리 및 UI를 초기화함
     /// </summary>
     public void OnCloseResult()
     {
+        // ✅ 1. 결과 패널 숨기기
         if (resultPanel != null)
             resultPanel.SetActive(false);
 
-        // ✅ 결과 버튼 다시 활성화
-        if (ladderManager != null && ladderManager.resultButton != null)
-            ladderManager.resultButton.interactable = true;
-
-
-        // ✅ 사다리 매니저가 연결되어 있다면 다음 라운드 초기화
+        // ✅ 2. 사다리 매니저가 연결된 경우
         if (ladderManager != null)
         {
             Debug.Log("OnCloseResult(): GenerateLadder 호출됨");
 
+            // ✅ 3. 새로운 라운드용 사다리 생성
             ladderManager.GenerateLadder();
 
-            // ✅ 배팅 UI도 다시 활성화
+            // ✅ 4. 배팅 UI 다시 활성화
             if (ladderManager.betAmountUIManager != null)
-            {
                 ladderManager.betAmountUIManager.SetInteractable(true);
-            }
 
-            // ✅ 보드 텍스트 강제 활성화
+            // ✅ 5. 보드 텍스트 강제 활성화
             if (ladderManager.boardText != null)
                 ladderManager.boardText.gameObject.SetActive(true);
+
+            // ✅ 6. 결과 버튼 상태를 "READY"로 설정 + 비활성화 (베팅 아직 안 했을 수 있음)
+            ladderManager.SetResultButtonState("READY", false);
         }
         else
         {
             Debug.LogError("LadderManager가 연결되지 않았습니다.");
         }
+    }
 
-        // ✅ 배팅 UI 다시 사용 가능
-        if (ladderManager?.betAmountUIManager != null)
-            ladderManager.betAmountUIManager.SetInteractable(true);
+    /// <summary>
+    /// 현재 결과 패널이 활성화되어 있는지 반환
+    /// </summary>
+    public bool IsResultVisible()
+    {
+        return resultPanel != null && resultPanel.activeSelf;
     }
 }
