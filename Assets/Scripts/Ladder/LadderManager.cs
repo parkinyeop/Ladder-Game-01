@@ -600,7 +600,7 @@ public class LadderManager : MonoBehaviour
     private void UpdateVerticalCountText()
     {
         if (verticalCountText != null)
-            verticalCountText.text = $"Vewrtical Lines Count: {verticalCount}";
+            verticalCountText.text = $"Vertical Lines Count: {verticalCount}";
     }
 
     private void IncreaseVerticalCount()
@@ -635,15 +635,15 @@ public class LadderManager : MonoBehaviour
         }
     }
 
-    private void DecreaseHorizontalLineCount()
-    {
-        int min = verticalCount - 1;
-        if (horizontalLineCount > min)
-        {
-            horizontalLineCount--;
-            UpdateHorizontalLineCountText();
-        }
-    }
+    //private void DecreaseHorizontalLineCount()
+    //{
+    //    int min = verticalCount - 1;
+    //    if (horizontalLineCount > min)
+    //    {
+    //        horizontalLineCount--;
+    //        UpdateHorizontalLineCountText();
+    //    }
+    //}
 
     private void CorrectHorizontalLineCount()
     {
@@ -652,11 +652,11 @@ public class LadderManager : MonoBehaviour
         horizontalLineCount = Mathf.Clamp(horizontalLineCount, min, max);
     }
 
-    private void UpdateHorizontalLineCountText()
-    {
-        if (horizontalLineCountText != null)
-            horizontalLineCountText.text = $"가로줄 개수: {horizontalLineCount}";
-    }
+    //private void UpdateHorizontalLineCountText()
+    //{
+    //    if (horizontalLineCountText != null)
+    //        horizontalLineCountText.text = $"가로줄 개수: {horizontalLineCount}";
+    //}
 
     private void OnRandomizeToggleChanged(bool isOn)
     {
