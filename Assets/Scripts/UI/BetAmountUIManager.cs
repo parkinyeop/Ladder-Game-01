@@ -87,10 +87,17 @@ public class BetAmountUIManager : MonoBehaviour
     {
         Debug.Log($"🟢 SetBetAmount 호출됨: {amount}");
 
+        // ✅ 보유 코인 초과 금액은 무시 (슬라이더/버튼에서 모두 적용됨)
+        if (ladderManager != null && amount > ladderManager.currentCoin)
+        {
+            Debug.LogWarning($"❌ {amount} 코인은 현재 보유 코인 {ladderManager.currentCoin}보다 높음. 무시됨.");
+            return;
+        }
+
         betAmount = amount;
         currentBetAmount = amount; // 동기화
 
-        // 슬라이더 위치 변경
+        // ✅ 슬라이더 위치 동기화 (중복 리스너 방지)
         if (betSlider != null && betSlider.value != amount)
         {
             betSlider.onValueChanged.RemoveListener(OnSliderValueChanged);
@@ -100,7 +107,7 @@ public class BetAmountUIManager : MonoBehaviour
 
         UpdateBetAmountText();
 
-        // 🎯 버튼 색상 처리 (텍스트 파싱 없이 명시적 비교)
+        // ✅ 버튼 색상 강조 (텍스트 파싱 없이 명시적 매칭)
         foreach (var btn in betButtons)
         {
             if (btn == bet1Button && amount == 1)
@@ -117,7 +124,7 @@ public class BetAmountUIManager : MonoBehaviour
                 btn.GetComponent<Image>().color = Color.white;
         }
 
-        // 결과 버튼 활성화 조건
+        // ✅ 결과 버튼 활성화 조건 (Ready 상태 + 배팅 금액 > 0)
         if (ladderManager != null && ladderManager.IsInReadyState())
         {
             ladderManager.resultButton.interactable = (betAmount > 0);
@@ -162,10 +169,7 @@ public class BetAmountUIManager : MonoBehaviour
             else if (btn == bet50Button) value = 50;
             else if (btn == bet100Button) value = 100;
 
-            bool enable = value <= currentCoin;
-            btn.interactable = enable;
-
-            Debug.Log($"   ▶ 버튼 {value} → {(enable ? "활성화" : "비활성화")}");
+            btn.interactable = (value <= currentCoin);
         }
     }
 
