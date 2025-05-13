@@ -99,7 +99,7 @@ public class LadderManager : MonoBehaviour
 
         // 🔍 필수 컴포넌트 연결 여부 확인
         if (resultButton == null) Debug.LogError("🚨 resultButton 연결 오류");
-        if (generateButton == null) Debug.LogError("🚨 generateButton 연결 오류");
+        //if (generateButton == null) Debug.LogError("🚨 generateButton 연결 오류");
         if (ladderRoot == null) Debug.LogError("🚨 ladderRoot 연결 오류");
         if (startButtonPrefab == null || startButtonsParent == null) Debug.LogError("🚨 Start 버튼 관련 프리팹 누락");
         if (destinationButtonPrefab == null || destinationButtonsParent == null) Debug.LogError("🚨 Destination 버튼 프리팹 누락");
@@ -306,78 +306,76 @@ public class LadderManager : MonoBehaviour
             rewardText.gameObject.SetActive(false);
     }
 
-    /// 플레이어 도착 후 실행되는 결과 처리 함수
-    /// - 도착 지점과 목표 지점 일치 여부 확인
-    /// - 보상 계산 및 지급
-    /// - 결과 UI 패널 표시
-    /// - 결과 버튼 상태 갱신
+    /// <summary>
+    /// 플레이어 도착 후 결과 판단 및 보상 지급 처리
     /// </summary>
     private void CheckResult(int arrivedIndex)
     {
-        // ✅ 골 버튼의 인덱스를 가져옴 (도착 목표)
+        // ✅ 골 버튼 인덱스 가져오기
         int goalIndex = generator.GetSelectedDestination();
 
-        // ✅ 현재 베팅 금액 가져오기
+        // ✅ 현재 배팅 금액 (float로 유지)
         float betAmount = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0f;
 
         // ✅ 골/스타트 배율 계산
-        float goalMultiplier = verticalCount * goalMultiplierFactor;                   // 예: 3 × 0.9 = 2.7
-        float startMultiplier = verticalCount * verticalCount * startMultiplierFactor; // 예: 3 × 3 × 0.9 = 8.1
+        float goalMultiplier = verticalCount * goalMultiplierFactor;
+        float startMultiplier = verticalCount * verticalCount * startMultiplierFactor;
 
-        // ✅ 스타트 버튼이 수동 선택되었는지 확인
+        // ✅ 스타트 버튼 수동 선택 여부 확인
         bool hasSelectedStart = selectedStartIndex >= 0;
 
-        // ✅ 최종 배율: 선택 여부에 따라 분기
+        // ✅ 최종 배율 결정
         float finalMultiplier = hasSelectedStart ? startMultiplier : goalMultiplier;
 
-        // ✅ 최종 보상 계산
+        // ✅ 보상 계산 (실수 그대로 유지)
         float reward = betAmount * finalMultiplier;
-        int roundedReward = Mathf.FloorToInt(reward); // 정수 보정
 
-        // ✅ 성공 여부 판단: 실제 도착 인덱스와 골 인덱스 일치 여부
+        // ✅ 성공 여부 판단
         bool isSuccess = arrivedIndex == goalIndex;
 
-        // ✅ 결과 패널 출력 (ResultUIManager 활용)
+        // ✅ 결과 패널 표시
         if (resultUIManager != null)
         {
-            // 실패 시 보상은 0
+            // 실패 시 보상은 0 처리
             if (!isSuccess)
+            {
                 reward = 0f;
+            }
 
+            // 메시지 작성
             string message = isSuccess
-                ? $"YOU DID IT! Claim your {reward} Coins"
-                : $"OH NO! Better luck next time!";
+                ? $"YOU DID IT! Claim your {reward:F1} Coins"
+                : "OH NO! Better luck next time!";
 
-            resultUIManager.ShowResult(message); // 🎯 결과 패널 출력
+            resultUIManager.ShowResult(message);
 
-            // ✅ 코인 증감 처리
+            // ✅ 보유 코인 증감 (float 단위로 처리)
             if (isSuccess)
             {
-                AddCoin(roundedReward);                      // 보상 지급
+                AddCoin(reward); // 성공 시 보상 추가
             }
             else
             {
-                AddCoin(-Mathf.FloorToInt(betAmount));       // 실패 시 배팅 금액 차감
+                AddCoin(-betAmount); // 실패 시 배팅 금액 차감
             }
         }
 
-        // ✅ 결과 패널이 열려있는 경우 → 버튼은 READY 상태로만 표시, 클릭 불가
+        // ✅ 결과 패널이 열려 있으면 → 버튼은 READY지만 비활성화 상태
         bool resultVisible = resultUIManager != null && resultUIManager.IsResultVisible();
-        SetResultButtonState("READY", !resultVisible); // 🔒 열려 있으면 비활성화
+        SetResultButtonState("READY", !resultVisible); // 열려 있으면 버튼 비활성화
 
-        // ✅ 배팅 UI 다시 활성화 (다음 라운드 준비)
+        // ✅ 배팅 UI 다시 사용 가능하게 설정
         if (betAmountUIManager != null)
         {
             betAmountUIManager.SetInteractable(true);
         }
 
-        // ✅ 기대값 텍스트 숨김
+        // ✅ 기대 보상 텍스트 숨기기
         if (rewardText != null)
         {
             rewardText.gameObject.SetActive(false);
         }
     }
-
     /// <summary>
     /// 모든 골 버튼을 활성화 또는 비활성화
     /// </summary>
@@ -991,8 +989,15 @@ public class LadderManager : MonoBehaviour
     /// </summary>
     private void UpdateCoinUI()
     {
+        Debug.Log($"💰 현재 보유 코인: {currentCoin}"); // 실제 float 값 확인
+
         if (coinTextUI != null)
-            coinTextUI.text = $"Balance: {currentCoin:F1}";
+        {
+            // 💡 소수점 1자리까지 표현 (예: 102.7)
+            coinTextUI.text = $"Balance: {currentCoin:F1}";
+            Debug.Log($"🧪 표시 문자열: {currentCoin:F1}"); // 표시 문자열 확인
+            
+        }
     }
 
     // ✅ 정확한 함수 정의 예시
