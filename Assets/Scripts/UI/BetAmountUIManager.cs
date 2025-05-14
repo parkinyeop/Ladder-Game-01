@@ -90,7 +90,7 @@ public class BetAmountUIManager : MonoBehaviour
         if (amount > coin || coin <= 0f)
         {
             if (ladderManager != null && ladderManager.boardText != null)
-                ladderManager.boardText.text = coin <= 0f ? "잔고가 부족합니다" : "보유 금액보다 큰 배팅입니다";
+                ladderManager.boardText.text = coin <= 0f ? "NOT ENOUGH BALANCE" : "NOT ENOUGH BALANCE";
 
             betAmount = 0f;
             currentBetAmount = 0f;
