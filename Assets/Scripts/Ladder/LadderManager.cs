@@ -862,35 +862,26 @@ public class LadderManager : MonoBehaviour
     /// </summary>
     private void OnBetConfirmedHandler(float betAmount)
     {
+        float coin = currentCoin;
         Debug.Log($"💰 배팅 확정: {betAmount} 코인");
 
-        // ✅ 보드 텍스트가 비활성화 상태이면 강제로 보여줌
-        if (boardText != null && !boardText.gameObject.activeInHierarchy)
+        if (boardText != null)
         {
             boardText.gameObject.SetActive(true);
+
+            if (betAmount <= 0f || betAmount > coin)
+                boardText.text = "INPUT YOUR BET AMOUNT";
+            else
+                boardText.text = "PRESS READY BUTTON";
         }
 
-        // ✅ 결과 버튼 텍스트 객체 가져오기
-        var txt = resultButton.GetComponentInChildren<TextMeshProUGUI>();
+        SetResultButtonState(
+        state: (betAmount > 0f && betAmount <= coin) ? "READY" : "DISABLED",
+        isInteractable: (betAmount > 0f && betAmount <= coin)
+    );
 
-        // ❌ 베팅 금액이 0 이하인 경우: 결과 버튼 비활성화 및 안내 출력
-        if (betAmount <= 0)
-        {
-            SetResultButtonState("DISABLED", false);
 
-            if (boardText != null)
-                boardText.text = "INPUT YOUR BET AMOUNT.";
-            return;
-        }
-
-       // 🔵 버튼 텍스트 설정 및 READY 상태로 복구
-        SetResultButtonState("READY", true);  // 텍스트와 활성화 처리
-
-        // 🔵 보드에 Ready 버튼 누르라는 안내 출력
-        if (boardText != null)
-            boardText.text = "PRESS READY BUTTON";
-
-        // ✅ 배팅 UI를 다시 비활성화 (Ready 이후에 활성화됨)
+        // ✅ 배팅 UI는 비활성화
         if (betAmountUIManager != null)
             betAmountUIManager.SetInteractable(false);
     }

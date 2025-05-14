@@ -75,11 +75,11 @@ public class BetAmountUIManager : MonoBehaviour
     /// <summary>
     /// 배팅 금액을 설정하고 UI와 로직을 동기화함
     /// </summary>
+    // ✅ SetBetAmount()에서 유효한 배팅일 경우 ConfirmBet() 자동 호출 추가
     public void SetBetAmount(float amount)
     {
         float coin = ladderManager != null ? ladderManager.currentCoin : 0f;
 
-        // 모든 버튼 색 초기화
         foreach (var btn in betButtons)
         {
             if (btn != null)
@@ -90,12 +90,11 @@ public class BetAmountUIManager : MonoBehaviour
         if (amount > coin || coin <= 0f)
         {
             if (ladderManager != null && ladderManager.boardText != null)
-                ladderManager.boardText.text = coin <= 0f ? "NOT ENOUGH BALANCE" : "NOT ENOUGH BALANCE";
+                ladderManager.boardText.text = coin <= 0f ? "잔고가 부족합니다" : "보유 금액보다 큰 배팅입니다";
 
             betAmount = 0f;
             currentBetAmount = 0f;
 
-            // 슬라이더도 0으로 리셋
             if (betSlider != null)
             {
                 betSlider.onValueChanged.RemoveAllListeners();
@@ -105,7 +104,6 @@ public class BetAmountUIManager : MonoBehaviour
 
             UpdateBetAmountText();
 
-            // 골/결과 버튼 비활성화 처리
             if (ladderManager != null) ladderManager.SetGoalButtonsInteractable(false);
             if (ladderManager != null && ladderManager.IsInReadyState())
                 ladderManager.resultButton.interactable = false;
@@ -113,11 +111,10 @@ public class BetAmountUIManager : MonoBehaviour
             return;
         }
 
-        // ✅ 배팅 금액 정상 설정
+        // ✅ 유효한 배팅 금액일 경우
         betAmount = amount;
         currentBetAmount = amount;
 
-        // 슬라이더 동기화
         if (betSlider != null && betSlider.value != amount)
         {
             betSlider.onValueChanged.RemoveAllListeners();
@@ -127,7 +124,6 @@ public class BetAmountUIManager : MonoBehaviour
 
         UpdateBetAmountText();
 
-        // 해당 버튼만 하이라이트
         foreach (var btn in betButtons)
         {
             if ((btn == bet1Button && amount == 1f) ||
@@ -140,9 +136,11 @@ public class BetAmountUIManager : MonoBehaviour
             }
         }
 
-        // 결과 버튼 조건 활성화
         if (ladderManager != null && ladderManager.IsInReadyState())
             ladderManager.resultButton.interactable = (betAmount > 0f);
+
+        // ✅ 자동 확정 호출 추가
+        ConfirmBet();
     }
 
     /// <summary>
