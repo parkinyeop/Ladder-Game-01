@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+using System.Collections;
 
 /// <summary>
 /// LadderManager
@@ -138,6 +139,10 @@ public class LadderManager : MonoBehaviour
         // ✅ 안내 메시지 출력
         if (board != null) board.SetActive(true);
         if (boardText != null) boardText.text = "INPUT YOUR BET AMOUNT.";
+        if (currentCoin <= 0 && boardText != null)
+        {
+            boardText.text = "NOT ENOUGH BALANCE";
+        }
     }
 
     //private void OnBetAmountConfirmed(int amount)
@@ -184,7 +189,7 @@ public class LadderManager : MonoBehaviour
         }
 
         // ✅ 5. 현재 배팅 금액 확인
-        int currentBet = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0;
+        float currentBet = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0f;
 
         // ✅ 6. 결과 버튼 상태 결정 (READY 텍스트는 유지, 활성화 여부만 분기)
         if (currentBet <= 0)
@@ -219,17 +224,37 @@ public class LadderManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 결과 버튼(GO) 클릭 시 실행되는 함수
-    /// - 사다리의 가로줄을 생성하고 플레이어를 이동시킴
-    /// - 도착 인덱스를 확인 후 결과 처리로 이어짐
+    /// 결과 버튼(GO) 클릭 시 실행되는 메인 흐름 처리 함수
+    /// - 배팅 금액 및 보유 코인 조건 검사
+    /// - 플레이어 초기화 및 사다리 이동 애니메이션 실행
+    /// - 골 버튼, 스타트 버튼 상태, UI 텍스트 처리 포함
     /// </summary>
     public void OnResultButtonClicked()
     {
-        // 🔒 이미 이동 중인 경우 중복 실행 방지
+        float coin = currentCoin;
+        float bet = betAmountUIManager.GetBetAmount();
+
+        // ✅ 1차 조건 검사: 잔고 또는 배팅 금액이 유효한지 확인
+        if (coin < bet || bet <= 0f)
+        {
+            Debug.LogError($"❌ 실행 차단: 보유 코인({coin}) < 배팅({bet}) 또는 배팅 없음");
+
+            if (boardText != null)
+                boardText.text = "NOT ENOUGH BALANCE";
+
+            SetResultButtonState("DISABLED", false);
+
+            if (rewardText != null)
+                rewardText.gameObject.SetActive(false);
+
+            return;
+        }
+
+        // ✅ 중복 실행 방지: 플레이어 이동 중이면 무시
         if (playerMover.IsMoving())
             return;
 
-        // ❗ 도착(골) 버튼이 선택되지 않은 경우 경고 메시지 출력
+        // ❗ 골 버튼이 선택되지 않은 경우 안내 후 중단
         if (selectedGoalButton == null)
         {
             if (boardText != null)
@@ -237,21 +262,19 @@ public class LadderManager : MonoBehaviour
             return;
         }
 
-        // 📴 결과 버튼 즉시 비활성화 (중복 클릭 방지) + 상태 텍스트 "WAIT"
+        // 🔒 결과 버튼 잠금 및 상태 텍스트 "WAIT"
         SetResultButtonState("WAIT", false);
 
         // 📕 보드 UI 숨김
         if (board != null)
             board.SetActive(false);
 
-        // ⭐ 시작 위치 인덱스 결정
-        // - 선택된 인덱스가 있으면 그것을 사용
-        // - 없으면 무작위로 하나 선택
+        // ⭐ 시작 위치 인덱스 결정 (선택 없으면 무작위)
         int startIndex = selectedStartIndex >= 0
             ? selectedStartIndex
             : Random.Range(0, verticalCount);
 
-        // 🧹 기존 스타트 버튼들의 텍스트 제거 및 색상 초기화
+        // 🧹 스타트 버튼 텍스트 초기화
         foreach (var btn in startButtons)
         {
             Text label = btn.GetComponentInChildren<Text>();
@@ -259,35 +282,34 @@ public class LadderManager : MonoBehaviour
         }
         ResetAllStartButtonColors();
 
-        // 🟡 랜덤 선택된 경우 해당 스타트 버튼을 노란색으로 강조
+        // 🟡 무작위 선택된 스타트 버튼 강조 (노란색)
         if (selectedStartIndex < 0 && startIndex >= 0 && startIndex < startButtons.Count)
         {
             selectedStartButton = startButtons[startIndex];
             selectedStartButton.HighlightWithColor(Color.yellow);
         }
 
-        // 🗑 이전 라운드에서 생성된 플레이어 오브젝트 제거
+        // 🗑 이전 라운드 플레이어 제거
         if (playerTransform != null)
         {
-            playerMover.StopMove(this);                         // 이동 중지
-            Destroy(playerTransform.gameObject);                // 삭제
+            playerMover.StopMove(this);
+            Destroy(playerTransform.gameObject);
             playerTransform = null;
         }
 
-        // ✅ 가로줄 생성: 보장된 규칙에 따라 랜덤 개수 생성
+        // 🪜 가로줄 생성 (보장된 규칙에 따라 랜덤 개수)
         int min = verticalCount - 1;
         int max = verticalCount + 3;
         int horizontalLineCount = Random.Range(min, max + 1);
         ladderGenerator.SetupHorizontalLines(verticalCount, stepCount, horizontalLineCount, true);
 
-        // 🎮 플레이어 프리팹 유효성 검사
+        // 🎮 플레이어 프리팹 검사 및 생성
         if (playerPrefab == null) return;
 
-        // 🎮 플레이어 오브젝트 생성 및 사다리 위에 배치
         GameObject playerGO = Instantiate(playerPrefab, ladderRoot);
         playerTransform = playerGO.transform;
 
-        // 🎯 정확한 시작 위치 계산 (선택한 세로줄의 최상단 기준)
+        // 🎯 플레이어 시작 위치 계산 (선택한 세로줄의 최상단)
         RectTransform verticalLine = GetVerticalLineAt(startIndex);
         float x = verticalLine.anchoredPosition.x;
         float y = verticalLine.anchoredPosition.y + verticalLine.sizeDelta.y / 2f;
@@ -296,12 +318,12 @@ public class LadderManager : MonoBehaviour
         if (rect != null)
             rect.anchoredPosition = new Vector2(x, y);
 
-        // ▶ 플레이어 이동 준비 및 시작
-        playerMover.Setup(playerTransform, startIndex, 500f);     // 이동 대상, 시작 인덱스, 속도
-        playerMover.SetFinishCallback(CheckResult);               // 도착 후 결과 처리 콜백 등록
-        playerMover.StartMove(this);                              // 이동 시작
+        // ▶ 이동 로직 세팅 및 시작
+        playerMover.Setup(playerTransform, startIndex, 500f);
+        playerMover.SetFinishCallback(CheckResult);
+        playerMover.StartMove(this);
 
-        // 🧊 보상 기대값 텍스트 숨김
+        // 🧊 보상 기대값 숨김
         if (rewardText != null)
             rewardText.gameObject.SetActive(false);
     }
@@ -311,71 +333,49 @@ public class LadderManager : MonoBehaviour
     /// </summary>
     private void CheckResult(int arrivedIndex)
     {
-        // ✅ 골 버튼 인덱스 가져오기
         int goalIndex = generator.GetSelectedDestination();
-
-        // ✅ 현재 배팅 금액 (float로 유지)
         float betAmount = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0f;
 
-        // ✅ 골/스타트 배율 계산
+        // 배율 계산 (float 기준 유지)
         float goalMultiplier = verticalCount * goalMultiplierFactor;
         float startMultiplier = verticalCount * verticalCount * startMultiplierFactor;
-
-        // ✅ 스타트 버튼 수동 선택 여부 확인
         bool hasSelectedStart = selectedStartIndex >= 0;
-
-        // ✅ 최종 배율 결정
         float finalMultiplier = hasSelectedStart ? startMultiplier : goalMultiplier;
 
-        // ✅ 보상 계산 (실수 그대로 유지)
+        // 보상 계산
         float reward = betAmount * finalMultiplier;
-
-        // ✅ 성공 여부 판단
         bool isSuccess = arrivedIndex == goalIndex;
 
-        // ✅ 결과 패널 표시
         if (resultUIManager != null)
         {
-            // 실패 시 보상은 0 처리
             if (!isSuccess)
             {
                 reward = 0f;
             }
 
-            // 메시지 작성
             string message = isSuccess
                 ? $"YOU DID IT! Claim your {reward:F1} Coins"
                 : "OH NO! Better luck next time!";
-
             resultUIManager.ShowResult(message);
 
-            // ✅ 보유 코인 증감 (float 단위로 처리)
+            // 코인 증감
             if (isSuccess)
-            {
-                AddCoin(reward); // 성공 시 보상 추가
-            }
+                AddCoin(reward);
             else
-            {
-                AddCoin(-betAmount); // 실패 시 배팅 금액 차감
-            }
+                AddCoin(-betAmount);
         }
 
-        // ✅ 결과 패널이 열려 있으면 → 버튼은 READY지만 비활성화 상태
+        // 버튼 상태 반영
         bool resultVisible = resultUIManager != null && resultUIManager.IsResultVisible();
-        SetResultButtonState("READY", !resultVisible); // 열려 있으면 버튼 비활성화
+        SetResultButtonState("READY", !resultVisible);
 
-        // ✅ 배팅 UI 다시 사용 가능하게 설정
         if (betAmountUIManager != null)
-        {
             betAmountUIManager.SetInteractable(true);
-        }
 
-        // ✅ 기대 보상 텍스트 숨기기
         if (rewardText != null)
-        {
             rewardText.gameObject.SetActive(false);
-        }
     }
+
     /// <summary>
     /// 모든 골 버튼을 활성화 또는 비활성화
     /// </summary>
@@ -404,6 +404,14 @@ public class LadderManager : MonoBehaviour
     /// </summary>
     public void HighlightSelectedGoalButton(GoalBettingButton clickedButton)
     {
+        // ⛔ 배팅 금액이 0원인 경우 골 선택 차단
+        if (betAmountUIManager.GetBetAmount() <= 0)
+        {
+            if (boardText != null)
+                boardText.text = "INPUT YOUR BET AMOUNT FIRST!";
+            return;
+        }
+
         // ✅ 동일한 골 버튼을 다시 클릭 → 선택 해제
         if (selectedGoalButton == clickedButton)
         {
@@ -454,7 +462,7 @@ public class LadderManager : MonoBehaviour
         // ✅ 기대 보상 텍스트 출력 (골 기준 배율 × 배팅 금액)
         if (rewardText != null && betAmountUIManager != null)
         {
-            int betAmount = betAmountUIManager.GetBetAmount();
+            float betAmount = betAmountUIManager.GetBetAmount();
             float goalMultiplier = verticalCount * goalMultiplierFactor;
             float expectedReward = betAmount * goalMultiplier;
 
@@ -647,28 +655,7 @@ public class LadderManager : MonoBehaviour
             betAmountUIManager.SetInteractable(false);
     }
 
-    /// <summary>
-    /// 세로줄 변경 시 공통 초기화 처리
-    /// - 결과 버튼 상태 → READY & 비활성화
-    /// - 보드 텍스트 → "PRESS READY BUTTON"
-    /// - 배팅 UI도 비활성화
-    /// </summary>
-    //private void ResetAfterVerticalChange()
-    //{
-    //    // ✅ 결과 버튼 텍스트는 READY, 클릭은 막음
-    //    SetResultButtonState("READY", false);
-
-    //    // ✅ 보드 텍스트 안내
-    //    if (boardText != null)
-    //    {
-    //        boardText.gameObject.SetActive(true);
-    //        boardText.text = "PRESS READY BUTTON";
-    //    }
-
-    //    // ✅ 배팅 UI 비활성화 (READY 이후에 다시 활성화)
-    //    if (betAmountUIManager != null)
-    //        betAmountUIManager.SetInteractable(false);
-    //}
+    
     
     private void CorrectHorizontalLineCount()
     {
@@ -677,16 +664,7 @@ public class LadderManager : MonoBehaviour
         horizontalLineCount = Mathf.Clamp(horizontalLineCount, min, max);
     }
 
-    //private void UpdateHorizontalLineCountText()
-    //{
-    //    if (horizontalLineCountText != null)
-    //        horizontalLineCountText.text = $"가로줄 개수: {horizontalLineCount}";
-    //}
-
-    private void OnRandomizeToggleChanged(bool isOn)
-    {
-        randomizeHorizontalLines = isOn;
-    }
+  
 
     public RectTransform GetVerticalLineAt(int index)
     {
@@ -722,7 +700,7 @@ public class LadderManager : MonoBehaviour
             {
                 float goalFactor = goalMultiplierFactor;
                 float multiplier = verticalCount * goalFactor;
-                int bet = betAmountUIManager.GetBetAmount();
+                float bet = betAmountUIManager.GetBetAmount();
                 rewardText.text = $"Expected: {(bet * multiplier):F1} Coins";
             }
 
@@ -745,7 +723,7 @@ public class LadderManager : MonoBehaviour
             float gFactor = goalMultiplierFactor;
             float sFactor = startMultiplierFactor;
             float multiplier = gFactor * sFactor * (verticalCount * verticalCount);
-            int bet = betAmountUIManager.GetBetAmount();
+            float bet = betAmountUIManager.GetBetAmount();
             rewardText.text = $"Expected: {(bet * multiplier):F1} Coins";
         }
 
@@ -882,7 +860,7 @@ public class LadderManager : MonoBehaviour
     /// ✅ BetAmountUIManager에서 배팅 확정되었을 때 호출되는 핸들러
     /// - 코인에 따라 보드 메시지와 버튼 상태를 설정
     /// </summary>
-    private void OnBetConfirmedHandler(int betAmount)
+    private void OnBetConfirmedHandler(float betAmount)
     {
         Debug.Log($"💰 배팅 확정: {betAmount} 코인");
 
@@ -951,45 +929,34 @@ public class LadderManager : MonoBehaviour
         }
     }
 
-    /// <summary> 1
-    /// 결과 버튼의 상태와 텍스트, 인터랙션 가능 여부를 설정한다.
-    /// </summary>
-    /// <param name="state">READY / GO / DISABLED 중 하나</param>
-    //public void SetResultButtonState(string state, bool isInteractable)
-    //{
-    //    if (resultButton == null) return;
-
-    //    var label = resultButton.GetComponentInChildren<TextMeshProUGUI>();
-    //    if (label != null)
-    //        label.text = state;
-
-    //    resultButton.interactable = isInteractable;
-    //}
-
-    /// <summary>
-    /// 보유 코인을 설정하고 UI 갱신
-    /// </summary>
     public void SetCoin(float amount)
     {
-        currentCoin = Mathf.Max(0, amount);
+        currentCoin = Mathf.Max(0f, amount);
         UpdateCoinUI();
 
-        // 🔄 퀵 배팅 버튼 업데이트
+        // 코인 UI 변경 후 퀵배팅 버튼 업데이트
         if (betAmountUIManager != null)
+        {
             betAmountUIManager.UpdateQuickBetButtons(currentCoin);
+
+            // 🟡 배팅 금액이 보유 금액보다 클 경우 초기화
+            if (betAmountUIManager.GetBetAmount() > currentCoin)
+                betAmountUIManager.SetBetAmount(0f);
+        }
     }
 
-    /// <summary>
-    /// 보유 코인을 증가 또는 감소시키고 UI 갱신
-    /// </summary>
     public void AddCoin(float amount)
     {
-        currentCoin = Mathf.Max(0, currentCoin + amount);
+        currentCoin = Mathf.Max(0f, currentCoin + amount);
         UpdateCoinUI();
 
-        // 🔄 퀵 배팅 버튼 업데이트
         if (betAmountUIManager != null)
+        {
             betAmountUIManager.UpdateQuickBetButtons(currentCoin);
+
+            if (betAmountUIManager.GetBetAmount() > currentCoin)
+                betAmountUIManager.SetBetAmount(0f);
+        }
     }
 
     /// <summary>
@@ -1014,20 +981,34 @@ public class LadderManager : MonoBehaviour
         return verticalLines;
     }
 
-    /// <summary>
-    /// 결과창(ResultUIManager)이 닫힌 후 보드 메시지 및 결과 버튼 상태를 처리하는 함수
-    /// </summary>
-    public void HandlePostResultUIClosed()
+    private IEnumerator HandlePostResultUIClosedRoutine()
     {
-        // ✅ 항상 안내 메시지 출력
+        yield return new WaitForEndOfFrame(); // UI가 완전히 닫힌 후 적용
+
+        float coin = currentCoin;
+        float bet = betAmountUIManager.GetBetAmount();
+
         if (boardText != null)
             boardText.text = "CHOOSE YOUR DESTINATION!";
 
-        // ✅ 골 선택 여부에 따라 상태 처리
         if (selectedGoalButton != null)
             SetResultButtonState("GO");
         else
-            SetResultButtonState("DISABLED"); // 골 선택 전에는 잠금
+            SetResultButtonState("DISABLED");
+
+        // 🔒 잔고 부족하면 배팅 초기화
+        if (coin <= 0f || coin < bet)
+        {
+            Debug.LogWarning("💸 배팅 초기화: 보유 코인이 부족합니다.");
+            betAmountUIManager.SetBetAmount(0f);
+
+            if (boardText != null)
+                boardText.text = "NOT ENOUGH BALANCE.";
+        }
+        else
+        {
+            betAmountUIManager.SetBetAmount(bet); // 유효한 금액이면 그대로 유지
+        }
     }
 
     /// <summary>
@@ -1043,5 +1024,5 @@ public class LadderManager : MonoBehaviour
 
         resultButton.interactable = isInteractable;
     }
-       
+               
 }

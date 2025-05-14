@@ -39,11 +39,19 @@ public class GoalBettingButton : MonoBehaviour
     /// </summary>
     private void SelectDestination()
     {
-        if (ladderManager != null)
+        if (ladderManager == null)
+            return;
+
+        // 💥 배팅 금액이 0이면 클릭 차단 + 메시지 출력
+        if (ladderManager.betAmountUIManager != null && ladderManager.betAmountUIManager.GetBetAmount() <= 0)
         {
-            ladderManager.SetSelectedDestination(destinationIndex); // 선택 처리
-            ladderManager.HighlightSelectedGoalButton(this);        // 시각적 하이라이트
+            if (ladderManager.boardText != null)
+                ladderManager.boardText.text = "INPUT YOUR BET AMOUNT FIRST!";
+            return;
         }
+
+        ladderManager.SetSelectedDestination(destinationIndex); // 선택 처리
+        ladderManager.HighlightSelectedGoalButton(this);        // 시각적 하이라이트
     }
 
     /// <summary>
@@ -103,4 +111,6 @@ public class GoalBettingButton : MonoBehaviour
         if (multiplierText != null)
             multiplierText.enabled = isVisible;
     }
+
+    
 }
