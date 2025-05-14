@@ -182,10 +182,16 @@ public class LadderManager : MonoBehaviour
 
         // ✅ 4. 보드 UI 활성화 및 기본 메시지 출력
         if (board != null) board.SetActive(true);
+
+        float bet = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0f;
+
         if (boardText != null)
         {
-            boardText.gameObject.SetActive(true);
-            boardText.text = "CHOOSE YOUR DESTINATION!";
+            boardText.gameObject.SetActive(true); // 🔥 여기가 반드시 필요
+            boardText.enabled = true;
+            boardText.text = (bet <= 0)
+                ? "SET YOUR BET AMOUNT!"
+                : "CHOOSE YOUR DESTINATION!";
         }
 
         // ✅ 5. 현재 배팅 금액 확인
@@ -223,58 +229,44 @@ public class LadderManager : MonoBehaviour
             resultUIManager.Hide();
     }
 
+
     /// <summary>
-    /// 결과 버튼(GO) 클릭 시 실행되는 메인 흐름 처리 함수
-    /// - 배팅 금액 및 보유 코인 조건 검사
-    /// - 플레이어 초기화 및 사다리 이동 애니메이션 실행
-    /// - 골 버튼, 스타트 버튼 상태, UI 텍스트 처리 포함
+    /// 결과 버튼(GO) 클릭 시 실행되는 메인 함수
+    /// - 조건 검사 후 플레이어 이동 실행
+    /// - 플레이 상태에 따라 보드 메시지를 명확하게 출력
     /// </summary>
     public void OnResultButtonClicked()
     {
         float coin = currentCoin;
         float bet = betAmountUIManager.GetBetAmount();
 
-        // ✅ 1차 조건 검사: 잔고 또는 배팅 금액이 유효한지 확인
+        // ✅ [1] 잔고 부족 또는 배팅 미설정 상태
         if (coin < bet || bet <= 0f)
         {
-            Debug.LogError($"❌ 실행 차단: 보유 코인({coin}) < 배팅({bet}) 또는 배팅 없음");
-
-            if (boardText != null)
-                boardText.text = "NOT ENOUGH BALANCE";
-
+            SetBoardMessage("NOT ENOUGH BALANCE");
             SetResultButtonState("DISABLED", false);
-
-            if (rewardText != null)
-                rewardText.gameObject.SetActive(false);
-
+            if (rewardText != null) rewardText.gameObject.SetActive(false);
             return;
         }
 
-        // ✅ 중복 실행 방지: 플레이어 이동 중이면 무시
-        if (playerMover.IsMoving())
-            return;
+        // ✅ [2] 중복 클릭 방지: 이동 중이면 무시
+        if (playerMover.IsMoving()) return;
 
-        // ❗ 골 버튼이 선택되지 않은 경우 안내 후 중단
+        // ✅ [3] 골 버튼 미선택 상태
         if (selectedGoalButton == null)
         {
-            if (boardText != null)
-                boardText.text = "CHOOSE YOUR DESTINATION!";
+            SetBoardMessage("CHOOSE YOUR DESTINATION!");
             return;
         }
 
-        // 🔒 결과 버튼 잠금 및 상태 텍스트 "WAIT"
+        // ✅ [4] 이동 시작: 버튼 상태 → WAIT, 보드 유지
         SetResultButtonState("WAIT", false);
+        if (boardText != null) boardText.gameObject.SetActive(true);
 
-        // 📕 보드 UI 숨김
-        if (board != null)
-            board.SetActive(false);
+        // ✅ [5] 시작 위치 설정 (선택 없으면 무작위)
+        int startIndex = selectedStartIndex >= 0 ? selectedStartIndex : Random.Range(0, verticalCount);
 
-        // ⭐ 시작 위치 인덱스 결정 (선택 없으면 무작위)
-        int startIndex = selectedStartIndex >= 0
-            ? selectedStartIndex
-            : Random.Range(0, verticalCount);
-
-        // 🧹 스타트 버튼 텍스트 초기화
+        // ✅ [6] 스타트 버튼 UI 초기화
         foreach (var btn in startButtons)
         {
             Text label = btn.GetComponentInChildren<Text>();
@@ -282,14 +274,14 @@ public class LadderManager : MonoBehaviour
         }
         ResetAllStartButtonColors();
 
-        // 🟡 무작위 선택된 스타트 버튼 강조 (노란색)
+        // ✅ [7] 무작위 스타트 선택 시 하이라이트
         if (selectedStartIndex < 0 && startIndex >= 0 && startIndex < startButtons.Count)
         {
             selectedStartButton = startButtons[startIndex];
             selectedStartButton.HighlightWithColor(Color.yellow);
         }
 
-        // 🗑 이전 라운드 플레이어 제거
+        // ✅ [8] 기존 플레이어 제거
         if (playerTransform != null)
         {
             playerMover.StopMove(this);
@@ -297,19 +289,17 @@ public class LadderManager : MonoBehaviour
             playerTransform = null;
         }
 
-        // 🪜 가로줄 생성 (보장된 규칙에 따라 랜덤 개수)
+        // ✅ [9] 가로줄 생성
         int min = verticalCount - 1;
         int max = verticalCount + 3;
         int horizontalLineCount = Random.Range(min, max + 1);
         ladderGenerator.SetupHorizontalLines(verticalCount, stepCount, horizontalLineCount, true);
 
-        // 🎮 플레이어 프리팹 검사 및 생성
+        // ✅ [10] 플레이어 프리팹 생성 및 배치
         if (playerPrefab == null) return;
-
         GameObject playerGO = Instantiate(playerPrefab, ladderRoot);
         playerTransform = playerGO.transform;
 
-        // 🎯 플레이어 시작 위치 계산 (선택한 세로줄의 최상단)
         RectTransform verticalLine = GetVerticalLineAt(startIndex);
         float x = verticalLine.anchoredPosition.x;
         float y = verticalLine.anchoredPosition.y + verticalLine.sizeDelta.y / 2f;
@@ -318,14 +308,31 @@ public class LadderManager : MonoBehaviour
         if (rect != null)
             rect.anchoredPosition = new Vector2(x, y);
 
-        // ▶ 이동 로직 세팅 및 시작
+        // ✅ [11] 이동 시작
         playerMover.Setup(playerTransform, startIndex, 500f);
         playerMover.SetFinishCallback(CheckResult);
         playerMover.StartMove(this);
 
-        // 🧊 보상 기대값 숨김
+        // ✅ [12] 기대 보상 숨김
         if (rewardText != null)
             rewardText.gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// 보드 텍스트를 명확하게 출력하며 항상 활성화 상태로 보장함
+    /// </summary>
+    private void SetBoardMessage(string message)
+    {
+        if (!boardText.enabled)
+            boardText.enabled = true;
+
+        if (boardText != null)
+        {
+            boardText.gameObject.SetActive(true);    // 오브젝트 활성화 보장
+            boardText.enabled = true;                 // ✅ 텍스트 렌더링 강제 활성화
+            boardText.text = message;                 // 텍스트 설정
+            boardText.ForceMeshUpdate();              // TMP 강제 리프레시
+        }
     }
 
     /// <summary>
@@ -491,6 +498,19 @@ public class LadderManager : MonoBehaviour
 
         if (label == "READY")
         {
+            if (boardText != null)
+            {
+                boardText.gameObject.SetActive(true); // 🔄 오브젝트 활성화
+                boardText.enabled = true;             // 🔄 TMP 렌더링 보장
+            }
+
+            // ✅ boardText가 꺼져 있다면 활성화
+            if (boardText != null && !boardText.enabled)
+                boardText.enabled = true;
+
+            // ✅ 메시지도 기본 출력
+            SetBoardMessage("CHOOSE YOUR DESTINATION!");
+
             GenerateLadder();
             labelComponent.text = "GO";
 
@@ -863,11 +883,11 @@ public class LadderManager : MonoBehaviour
     private void OnBetConfirmedHandler(float betAmount)
     {
         float coin = currentCoin;
-        Debug.Log($"💰 배팅 확정: {betAmount} 코인");
-
+        
         if (boardText != null)
         {
             boardText.gameObject.SetActive(true);
+            boardText.enabled = true;
 
             if (betAmount <= 0f || betAmount > coin)
                 boardText.text = "INPUT YOUR BET AMOUNT";
