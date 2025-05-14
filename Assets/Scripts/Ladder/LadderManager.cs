@@ -261,7 +261,7 @@ public class LadderManager : MonoBehaviour
 
         // ✅ [4] 이동 시작: 버튼 상태 → WAIT, 보드 유지
         SetResultButtonState("WAIT", false);
-        if (boardText != null) boardText.gameObject.SetActive(true);
+        if (boardText != null) board.SetActive(false);
 
         // ✅ [5] 시작 위치 설정 (선택 없으면 무작위)
         int startIndex = selectedStartIndex >= 0 ? selectedStartIndex : Random.Range(0, verticalCount);
