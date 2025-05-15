@@ -136,6 +136,9 @@ public class LadderManager : MonoBehaviour
         // ✅ 코인 UI 갱신
         UpdateCoinUI();
 
+        if (rewardText != null)
+            rewardText.gameObject.SetActive(false);
+
         // ✅ 안내 메시지 출력
         if (board != null) board.SetActive(true);
         if (boardText != null) boardText.text = "INPUT YOUR BET AMOUNT.";
@@ -469,6 +472,13 @@ public class LadderManager : MonoBehaviour
         // ✅ 기대 보상 텍스트 출력 (골 기준 배율 × 배팅 금액)
         if (rewardText != null && betAmountUIManager != null)
         {
+            // 골 선택 시 안내 메시지는 숨기고 리워드만 표시
+            if (boardText != null)
+                boardText.gameObject.SetActive(false); // ⬅ 안내 텍스트 숨김
+
+            if (rewardText != null)
+                rewardText.gameObject.SetActive(true); // ⬅ 기대 보상 출력
+
             float betAmount = betAmountUIManager.GetBetAmount();
             float goalMultiplier = verticalCount * goalMultiplierFactor;
             float expectedReward = betAmount * goalMultiplier;
