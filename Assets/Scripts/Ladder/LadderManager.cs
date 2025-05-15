@@ -47,12 +47,8 @@ public class LadderManager : MonoBehaviour
     [Header("세로/가로줄 수 조절 UI")]
     public Button increaseVerticalButton;
     public Button decreaseVerticalButton;
-    //public Button increaseHorizontalButton;
-    //public Button decreaseHorizontalButton;
-    //public Toggle randomizeToggle;
     public TMP_Text verticalCountText;
-    public TMP_Text horizontalLineCountText;
-
+    
     [Header("프리팹 및 부모")]
     public Transform ladderRoot;                // 사다리 줄들의 부모 오브젝트
     public GameObject verticalLinePrefab;
@@ -73,9 +69,7 @@ public class LadderManager : MonoBehaviour
     public TMP_Text coinTextUI;       // 인스펙터에서 연결할 텍스트 오브젝트
 
     private LadderGenerator generator;          // 사다리 생성기
-    //private PlayerMover playerMover;            // 플레이어 이동기
-    private GameObject spawnedPlayer;           // 현재 생성된 플레이어 오브젝트
-    private List<Button> betButtons = new(); // 모든 배팅 버튼을 리스트로 관리
+      private List<Button> betButtons = new(); // 모든 배팅 버튼을 리스트로 관리
 
     private GoalBettingButton selectedGoalButton = null;                // 선택된 골 버튼 참조
     private List<GoalBettingButton> destinationButtons = new();        // 모든 골 버튼 리스트
@@ -85,7 +79,7 @@ public class LadderManager : MonoBehaviour
     public GameObject startButtonPrefab;             // 출발 버튼 프리팹
     public Transform startButtonsParent;             // 출발 버튼들을 담을 부모 오브젝트
 
-    [SerializeField] private BetAmountUIManager betUIManager;
+    
     [SerializeField] private TextMeshProUGUI resultButtonLabel;
 
     public BetAmountUIManager betAmountUIManager;
@@ -118,6 +112,13 @@ public class LadderManager : MonoBehaviour
         if (resultButtonLabel == null)
             resultButtonLabel = resultButton.GetComponentInChildren<TextMeshProUGUI>();
 
+        if (betAmountUIManager == null)
+        {
+            GameObject found = GameObject.FindWithTag("BetAmountUI");
+            if (found != null)
+                betAmountUIManager = found.GetComponent<BetAmountUIManager>();
+        }
+
         // ✅ UI 버튼 이벤트 등록
         SetupUI();
         generateButton?.onClick.AddListener(GenerateLadder);
@@ -146,6 +147,8 @@ public class LadderManager : MonoBehaviour
         {
             boardText.text = "NOT ENOUGH BALANCE";
         }
+
+        DisableTMPTextRaycasts();
     }
 
     //private void OnBetAmountConfirmed(int amount)
@@ -1045,5 +1048,15 @@ public class LadderManager : MonoBehaviour
 
         resultButton.interactable = isInteractable;
     }
-               
+
+    void DisableTMPTextRaycasts()
+    {
+        TMP_Text[] allTexts = GetComponentsInChildren<TMP_Text>(true); // 모든 자식 포함
+        foreach (var tmp in allTexts)
+        {
+            if (tmp != null)
+                tmp.raycastTarget = false;
+        }
+    }
+
 }

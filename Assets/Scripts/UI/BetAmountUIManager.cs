@@ -50,18 +50,34 @@ public class BetAmountUIManager : MonoBehaviour
             betSlider.onValueChanged.AddListener((value) => SetBetAmount(value));
         }
 
-        // 버튼 연결
+        // ✅ 버튼 리스트 초기화
         betButtons.AddRange(new[] { bet1Button, bet5Button, bet10Button, bet50Button, bet100Button });
-        if (bet1Button != null) bet1Button.onClick.AddListener(() => SetBetAmount(1f));
-        if (bet5Button != null) bet5Button.onClick.AddListener(() => SetBetAmount(5f));
-        if (bet10Button != null) bet10Button.onClick.AddListener(() => SetBetAmount(10f));
-        if (bet50Button != null) bet50Button.onClick.AddListener(() => SetBetAmount(50f));
-        if (bet100Button != null) bet100Button.onClick.AddListener(() => SetBetAmount(100f));
+
+        // ✅ 각각의 버튼에 명시적인 메서드로 등록 (WebGL 호환 보장)
+        if (bet1Button != null) bet1Button.onClick.AddListener(OnBet1Clicked);
+        if (bet5Button != null) bet5Button.onClick.AddListener(OnBet5Clicked);
+        if (bet10Button != null) bet10Button.onClick.AddListener(OnBet10Clicked);
+        if (bet50Button != null) bet50Button.onClick.AddListener(OnBet50Clicked);
+        if (bet100Button != null) bet100Button.onClick.AddListener(OnBet100Clicked);
+
+        // 버튼 연결
+        //betButtons.AddRange(new[] { bet1Button, bet5Button, bet10Button, bet50Button, bet100Button });
+        //if (bet1Button != null) bet1Button.onClick.AddListener(() => SetBetAmount(1f));
+        //if (bet5Button != null) bet5Button.onClick.AddListener(() => SetBetAmount(5f));
+        //if (bet10Button != null) bet10Button.onClick.AddListener(() => SetBetAmount(10f));
+        //if (bet50Button != null) bet50Button.onClick.AddListener(() => SetBetAmount(50f));
+        //if (bet100Button != null) bet100Button.onClick.AddListener(() => SetBetAmount(100f));
 
         // 초기 배팅 금액 설정
         SetBetAmount(0f);
         UpdateBetAmountText();
     }
+
+    private void OnBet1Clicked() => SetBetAmount(1f);
+    private void OnBet5Clicked() => SetBetAmount(5f);
+    private void OnBet10Clicked() => SetBetAmount(10f);
+    private void OnBet50Clicked() => SetBetAmount(50f);
+    private void OnBet100Clicked() => SetBetAmount(100f);
 
     /// <summary>
     /// 사용자가 배팅을 확정할 때 호출되는 함수 (외부에서 호출)
