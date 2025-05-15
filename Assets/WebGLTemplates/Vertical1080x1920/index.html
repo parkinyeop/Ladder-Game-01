@@ -1,0 +1,37 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Unity WebGL Player | Vertical 1080x1920</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: black;
+            overflow: hidden;
+            height: 100%;
+        }
+        canvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <script src="%UNITY_WEBGL_LOADER_URL%"></script>
+    <script>
+        createUnityInstance(document.body, {
+            dataUrl: "%UNITY_WEBGL_DATA_URL%",
+            frameworkUrl: "%UNITY_WEBGL_FRAMEWORK_URL%",
+            codeUrl: "%UNITY_WEBGL_CODE_URL%",
+            streamingAssetsUrl: "StreamingAssets",
+            companyName: "YourCompany",
+            productName: "YourProduct",
+            productVersion: "1.0"
+        });
+    </script>
+</body>
+</html>

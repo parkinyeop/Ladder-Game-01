@@ -491,15 +491,21 @@ public class LadderManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 결과 버튼 클릭 시 실행되는 함수
+    /// - 상태에 따라 사다리 생성 또는 결과 실행으로 분기
+    /// - 버튼 텍스트에 따라 "READY" 또는 "GO" 상태를 판단함
+    /// </summary>
     public void OnResultButtonPressed()
     {
-        // ✅ 결과 패널이 열려 있으면 아무 동작도 하지 않음 (강제 차단)
+        // ✅ 1. 결과창이 열려 있으면 아무 것도 실행하지 않음 (중복 방지)
         if (resultUIManager != null && resultUIManager.IsResultVisible())
         {
             Debug.LogWarning("⛔ 결과창이 열려 있는 동안 결과 버튼은 비활성화되어야 합니다.");
             return;
         }
 
+        // ✅ 2. 버튼 레이블(TextMeshProUGUI)을 가져옴
         var labelComponent = resultButton.GetComponentInChildren<TextMeshProUGUI>();
         if (labelComponent == null)
         {
@@ -509,34 +515,41 @@ public class LadderManager : MonoBehaviour
 
         string label = labelComponent.text;
 
+        // ───────────────────────────────────────────────
+        // 🎯 READY 상태 → 사다리 생성 및 메시지 출력
+        // ───────────────────────────────────────────────
         if (label == "READY")
         {
-            if (boardText != null)
+            GenerateLadder();
+
+            float bet = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0f;
+
+            if (bet <= 0f || currentCoin <= 0f)
             {
-                boardText.gameObject.SetActive(true); // 🔄 오브젝트 활성화
-                boardText.enabled = true;             // 🔄 TMP 렌더링 보장
+                SetBoardMessage("INPUT YOUR BET AMOUNT");
+                SetResultButtonState("READY", false);
+                SetGoalButtonsInteractable(false);
+                return;
             }
 
-            // ✅ boardText가 꺼져 있다면 활성화
-            if (boardText != null && !boardText.enabled)
-                boardText.enabled = true;
-
-            // ✅ 메시지도 기본 출력
+            SetResultButtonState("GO", true);
             SetBoardMessage("CHOOSE YOUR DESTINATION!");
 
-            GenerateLadder();
-            labelComponent.text = "GO";
+            // ✅ 골 버튼 인터랙션 설정 (배팅이 있을 때만 선택 가능)
+            SetGoalButtonsInteractable(bet > 0f);
 
-            // 골이 선택되었는지에 따라 버튼 활성화 여부 결정
-            if (selectedGoalButton == null)
-                SetResultButtonState("GO", false); // 골 선택 전 → GO 상태지만 비활성화
-            else
-                SetResultButtonState("GO", true);
+            // ✅ 결과 버튼의 인터랙션 가능 여부 결정
+            SetResultButtonState("GO", bet > 0f);
 
             isLadderGenerated = true;
         }
+
+        // ───────────────────────────────────────────────
+        // 🏁 GO 상태 → 결과 실행 시작
+        // ───────────────────────────────────────────────
         else if (label == "GO")
         {
+            // ❌ 골 버튼이 선택되지 않은 경우 → 안내 메시지 출력 후 중단
             if (selectedGoalButton == null)
             {
                 if (boardText != null)
@@ -544,15 +557,17 @@ public class LadderManager : MonoBehaviour
                 return;
             }
 
+            // 🔕 보상 기대값 텍스트 숨김 처리
             if (rewardText != null)
                 rewardText.gameObject.SetActive(false);
 
+            // ✅ 결과 실행 함수 호출
             OnResultButtonClicked();
 
+            // 🕐 버튼 상태를 WAIT으로 변경
             SetResultButtonState("WAIT", false);
         }
     }
-
     private void DimOtherGoalButtons(GoalBettingButton selectedButton)
     {
         foreach (var button in destinationButtons)
@@ -680,16 +695,31 @@ public class LadderManager : MonoBehaviour
     /// </summary>
     private void HandleVerticalCountChange()
     {
-        SetResultButtonState("READY", true); // ✅ READY 상태 활성화
-        if (boardText != null)
-            boardText.text = "PRESS READY BUTTON";
+        if (betAmountUIManager == null)
+            return;
 
-        if (betAmountUIManager != null)
-            betAmountUIManager.SetInteractable(false);
+        float bet = betAmountUIManager.GetBetAmount();
+
+        bool hasValidBet = (bet > 0f && currentCoin >= bet);
+
+        if (boardText != null)
+        {
+            boardText.gameObject.SetActive(true);
+            boardText.enabled = true;
+            boardText.text = hasValidBet ? "PRESS READY BUTTON" : "INPUT YOUR BET AMOUNT";
+        }
+
+        SetResultButtonState("READY", hasValidBet);
+
+        // 🔧 슬라이더와 버튼은 유효한 배팅이 있을 때만 활성화
+        betAmountUIManager.SetInteractable(hasValidBet);
+
+        // ✅ 퀵 버튼 상태 갱신 (보유 금액이 변경됐을 수 있음)
+        betAmountUIManager.UpdateQuickBetButtons(currentCoin);
     }
 
-    
-    
+
+
     private void CorrectHorizontalLineCount()
     {
         int min = verticalCount - 1;

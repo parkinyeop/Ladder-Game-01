@@ -59,15 +59,7 @@ public class BetAmountUIManager : MonoBehaviour
         if (bet10Button != null) bet10Button.onClick.AddListener(OnBet10Clicked);
         if (bet50Button != null) bet50Button.onClick.AddListener(OnBet50Clicked);
         if (bet100Button != null) bet100Button.onClick.AddListener(OnBet100Clicked);
-
-        // 버튼 연결
-        //betButtons.AddRange(new[] { bet1Button, bet5Button, bet10Button, bet50Button, bet100Button });
-        //if (bet1Button != null) bet1Button.onClick.AddListener(() => SetBetAmount(1f));
-        //if (bet5Button != null) bet5Button.onClick.AddListener(() => SetBetAmount(5f));
-        //if (bet10Button != null) bet10Button.onClick.AddListener(() => SetBetAmount(10f));
-        //if (bet50Button != null) bet50Button.onClick.AddListener(() => SetBetAmount(50f));
-        //if (bet100Button != null) bet100Button.onClick.AddListener(() => SetBetAmount(100f));
-
+        
         // 초기 배팅 금액 설정
         SetBetAmount(0f);
         UpdateBetAmountText();
@@ -106,7 +98,7 @@ public class BetAmountUIManager : MonoBehaviour
         if (amount > coin || coin <= 0f)
         {
             if (ladderManager != null && ladderManager.boardText != null)
-                ladderManager.boardText.text = coin <= 0f ? "잔고가 부족합니다" : "보유 금액보다 큰 배팅입니다";
+                ladderManager.boardText.text = coin <= 0f ? "NOT ENOUGH BALANCE" : "NOT ENOUGH BALANCE";
 
             betAmount = 0f;
             currentBetAmount = 0f;
@@ -157,6 +149,15 @@ public class BetAmountUIManager : MonoBehaviour
 
         // ✅ 자동 확정 호출 추가
         ConfirmBet();
+
+        // 🎯 메시지 상태도 갱신 (보유 코인과 연동)
+        if (ladderManager != null && ladderManager.boardText != null)
+        {
+            if (betAmount > 0f && ladderManager.currentCoin >= betAmount)
+                ladderManager.boardText.text = "PRESS READY BUTTON";
+            else
+                ladderManager.boardText.text = "INPUT YOUR BET AMOUNT";
+        }
     }
 
     /// <summary>

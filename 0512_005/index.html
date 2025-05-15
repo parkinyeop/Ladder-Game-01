@@ -1,0 +1,50 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ladder Game</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background: black;
+        }
+        canvas {
+            height: 100vh;
+            width: auto;
+            aspect-ratio: 9 / 16;
+            display: block;
+            margin: auto;
+            background: black;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="unity-canvas"></canvas>
+    <script src="Build/UnityLoader.js"></script>
+    <script>
+        var buildUrl = "Build";
+        var loaderUrl = buildUrl + "/build.loader.js";
+        var config = {
+            dataUrl: buildUrl + "/build.data",
+            frameworkUrl: buildUrl + "/build.framework.js",
+            codeUrl: buildUrl + "/build.wasm",
+            streamingAssetsUrl: "StreamingAssets",
+            companyName: "YourCompany",
+            productName: "LadderGame",
+            productVersion: "1.0",
+        };
+        var script = document.createElement("script");
+        script.src = loaderUrl;
+        script.onload = () => {
+            createUnityInstance(document.querySelector("#unity-canvas"), config, (progress) => {
+                console.log(`Loading... ${progress * 100}%`);
+            });
+        };
+        document.body.appendChild(script);
+    </script>
+</body>
+</html>
