@@ -23,6 +23,12 @@ public class GoalBettingButton : MonoBehaviour
     private static readonly Color DimColor = new Color(0.7f, 0.7f, 0.7f);        // 비활성화 색
     private static readonly Color DefaultColor = Color.white;                  // 기본색
 
+    private void Awake()
+    {
+        // ✅ 텍스트나 이미지가 Raycast를 막지 않도록 처리
+        DisableChildTMPRaycasts();
+    }
+
     private void Start()
     {
         // 버튼 컴포넌트 및 LadderManager 찾아 연결
@@ -59,6 +65,12 @@ public class GoalBettingButton : MonoBehaviour
     /// </summary>
     public void Highlight()
     {
+        var image = GetComponentInChildren<Image>();
+        var tmp = GetComponentInChildren<TextMeshProUGUI>();
+
+        if (image != null) image.raycastTarget = true;
+        if (tmp != null) tmp.raycastTarget = true;
+
         if (button != null && button.targetGraphic != null)
             button.targetGraphic.color = Color.yellow;
     }
@@ -112,5 +124,17 @@ public class GoalBettingButton : MonoBehaviour
             multiplierText.enabled = isVisible;
     }
 
-    
+    private void DisableChildTMPRaycasts()
+    {
+        foreach (var tmp in GetComponentsInChildren<TextMeshProUGUI>())
+        {
+            tmp.raycastTarget = false; // 🔒 Raycast 방지
+        }
+
+        foreach (var img in GetComponentsInChildren<Image>())
+        {
+            if (img.gameObject != this.gameObject)
+                img.raycastTarget = false;
+        }
+    }
 }

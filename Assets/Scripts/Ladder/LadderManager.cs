@@ -105,8 +105,8 @@ public class LadderManager : MonoBehaviour
         // 🔗 배팅 UI 이벤트 연결
         if (betAmountUIManager != null)
             betAmountUIManager.OnBetConfirmed += OnBetConfirmedHandler;
-        else
-            Debug.LogError("🚨 BetAmountUIManager 연결 안됨");
+        //else
+        //    Debug.LogError("🚨 BetAmountUIManager 연결 안됨");
 
         // ⛑ TMP 자동 연결 보정
         if (resultButtonLabel == null)
@@ -542,6 +542,8 @@ public class LadderManager : MonoBehaviour
             SetResultButtonState("GO", bet > 0f);
 
             isLadderGenerated = true;
+
+            StartCoroutine(ReenableGoalButtons());
         }
 
         // ───────────────────────────────────────────────
@@ -604,6 +606,10 @@ public class LadderManager : MonoBehaviour
             Destroy(child.gameObject);
         destinationButtons.Clear();
 
+        // ✅ 클릭 이벤트가 꼬이는 문제 해결을 위한 강제 정렬 보정
+        Canvas.ForceUpdateCanvases(); // ✅ 레이아웃 강제 갱신
+        //destinationButtonsParent.GetComponent<VerticalLayoutGroup>()?.SetLayoutVertical(); // 만약 사용 중일 경우
+
         // 🔽 골 버튼의 Y 위치 계산: 사다리 맨 아래 기준
         float bottomY = LadderLayoutHelper.GetYPosition(stepCount, stepCount, stepHeight);
         float goalButtonY = bottomY - 100f; // 약간 아래에 위치 (100f는 여백)
@@ -629,6 +635,9 @@ public class LadderManager : MonoBehaviour
 
             destinationButtons.Add(btn);
         }
+        // 🔚 생성 완료 후 강제 Layout 갱신
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(destinationButtonsParent.GetComponent<RectTransform>());
     }
 
     /// <summary>
@@ -1086,6 +1095,22 @@ public class LadderManager : MonoBehaviour
         {
             if (tmp != null)
                 tmp.raycastTarget = false;
+        }
+    }
+
+    // LadderManager.cs 안에 추가
+    private IEnumerator ReenableGoalButtons()
+    {
+        yield return null; // 한 프레임 대기
+
+        foreach (var btn in destinationButtons)
+        {
+            var uiBtn = btn.GetComponent<Button>();
+            if (uiBtn != null)
+            {
+                uiBtn.interactable = false;
+                uiBtn.interactable = true; // ✅ 강제로 리셋
+            }
         }
     }
 
