@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 using System.Collections;
+using UnityEngine.EventSystems;
 
 /// <summary>
 /// LadderManager
@@ -87,6 +88,9 @@ public class LadderManager : MonoBehaviour
     private bool isLadderGenerated = false;  // READY 상태 → GO 상태 전환 여부
     public float ladderWidth = 800f;
 
+    // LadderManager.cs 변수 선언부에 추가
+    public GoalButtonRaycastTester goalRaycastTester;
+
     private void Start()
     {
         generator = new LadderGenerator(this);
@@ -151,11 +155,14 @@ public class LadderManager : MonoBehaviour
         DisableTMPTextRaycasts();
     }
 
-    //private void OnBetAmountConfirmed(int amount)
-    //{
-    //    Debug.Log($"💰 확정된 배팅 금액: {amount}");
-    //    // 내부 게임 로직에서 활용
-    //}
+    void Update()
+    {
+        // 마우스 왼쪽 버튼 클릭 시 Raycast 검사
+        if (Input.GetMouseButtonDown(0))
+        {
+            DebugRaycastAt(Input.mousePosition);
+        }
+    }
 
     /// <summary>
     /// 버튼 및 토글과 이벤트 연결 초기화
@@ -233,6 +240,10 @@ public class LadderManager : MonoBehaviour
         // ✅ 10. 결과 패널은 새 라운드 시작 시 항상 숨김 처리
         if (resultUIManager != null)
             resultUIManager.Hide();
+
+        // LadderManager.cs (GenerateLadder 끝부분에 추가)
+        if (goalRaycastTester != null)
+            goalRaycastTester.RunTestAfterGeneration();
     }
 
 
@@ -661,6 +672,28 @@ public class LadderManager : MonoBehaviour
         // 🔚 생성 완료 후 강제 Layout 갱신
         Canvas.ForceUpdateCanvases();
         LayoutRebuilder.ForceRebuildLayoutImmediate(destinationButtonsParent.GetComponent<RectTransform>());
+        Canvas.ForceUpdateCanvases();
+
+        // ✅ 각 버튼에 대해 Raycast Target 보정
+        foreach (var btn in destinationButtons)
+        {
+            var images = btn.GetComponentsInChildren<Image>(true);
+            foreach (var img in images)
+            {
+                img.raycastTarget = true; // 모든 이미지 Raycast 가능하도록
+            }
+
+            var tmps = btn.GetComponentsInChildren<TextMeshProUGUI>(true);
+            foreach (var tmp in tmps)
+            {
+                tmp.raycastTarget = false; // 텍스트는 비활성화
+            }
+        }
+
+        // 버튼 생성 완료 후
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(destinationButtonsParent.GetComponent<RectTransform>());
+        FixRaycastTargets(); // 🔧 레이캐스트 문제 해결용 보정
     }
 
     /// <summary>
@@ -1137,4 +1170,34 @@ public class LadderManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 목적지 골 버튼들의 raycastTarget 속성을 강제 활성화
+    /// </summary>
+    private void FixRaycastTargets()
+    {
+        foreach (var btn in destinationButtons)
+        {
+            var text = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (text != null)
+                text.raycastTarget = false;
+        }
+    }
+
+    private void DebugRaycastAt(Vector2 screenPos)
+    {
+        PointerEventData pointer = new PointerEventData(EventSystem.current)
+        {
+            position = screenPos
+        };
+
+        List<RaycastResult> results = new List<RaycastResult>();
+        EventSystem.current.RaycastAll(pointer, results);
+
+        Debug.Log($"🔎 Raycast Hit Count: {results.Count}");
+
+        foreach (var result in results)
+        {
+            Debug.Log($"🟢 Raycast Hit: {result.gameObject.name}");
+        }
+    }
 }

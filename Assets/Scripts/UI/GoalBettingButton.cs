@@ -38,6 +38,14 @@ public class GoalBettingButton : MonoBehaviour
         // 클릭 이벤트 연결
         if (button != null)
             button.onClick.AddListener(SelectDestination);
+
+        // ✅ 디버그용 Raycast 타겟 검사
+        var graphics = GetComponentsInChildren<Graphic>(true);
+        foreach (var g in graphics)
+        {
+            if (!g.raycastTarget)
+                Debug.LogWarning($"❌ {name} 하위 컴포넌트 '{g.name}' RaycastTarget = false");
+        }
     }
 
     /// <summary>
