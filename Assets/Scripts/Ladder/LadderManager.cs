@@ -278,7 +278,7 @@ public class LadderManager : MonoBehaviour
             Text label = btn.GetComponentInChildren<Text>();
             if (label != null) label.text = "";
         }
-        ResetAllStartButtonColors();
+        //ResetAllStartButtonColors();
 
         // ✅ [7] 무작위 스타트 선택 시 하이라이트
         if (selectedStartIndex < 0 && startIndex >= 0 && startIndex < startButtons.Count)
@@ -344,51 +344,74 @@ public class LadderManager : MonoBehaviour
     /// <summary>
     /// 플레이어 도착 후 결과 판단 및 보상 지급 처리
     /// </summary>
+    /// <summary>
+    /// 플레이어 도착 후 결과 판단 및 보상 계산
+    /// - 골 도달 성공 여부 확인
+    /// - 선택된 스타트 버튼 유무에 따라 보상 배율 계산
+    /// - 결과 UI 출력 및 코인 증감 처리
+    /// </summary>
     private void CheckResult(int arrivedIndex)
     {
         int goalIndex = generator.GetSelectedDestination();
         float betAmount = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0f;
 
-        // 배율 계산 (float 기준 유지)
-        float goalMultiplier = verticalCount * goalMultiplierFactor;
-        float startMultiplier = verticalCount * verticalCount * startMultiplierFactor;
-        bool hasSelectedStart = selectedStartIndex >= 0;
-        float finalMultiplier = hasSelectedStart ? startMultiplier : goalMultiplier;
-
-        // 보상 계산
-        float reward = betAmount * finalMultiplier;
         bool isSuccess = arrivedIndex == goalIndex;
+        float reward = 0f;
+        float multiplier = 0f;
 
-        if (resultUIManager != null)
+        if (isSuccess)
         {
-            if (!isSuccess)
+            // ✅ 골 계수와 스타트 계수 모두 반영한 보상 계산
+            if (selectedStartIndex >= 0)
             {
-                reward = 0f;
+                // 스타트 선택된 경우 → goal × start × 세로줄²
+                multiplier = goalMultiplierFactor * startMultiplierFactor * (verticalCount * verticalCount);
+            }
+            else
+            {
+                // 스타트 미선택 시 → goal × 세로줄
+                multiplier = goalMultiplierFactor * verticalCount;
             }
 
+            reward = betAmount * multiplier;
+        }
+
+        // ✅ 결과 메시지 출력
+        if (resultUIManager != null)
+        {
             string message = isSuccess
                 ? $"YOU DID IT! Claim your {reward:F1} Coins"
                 : "OH NO! Better luck next time!";
-            resultUIManager.ShowResult(message);
 
-            // 코인 증감
-            if (isSuccess)
-                AddCoin(reward);
-            else
-                AddCoin(-betAmount);
+            resultUIManager.ShowResult(message);
         }
 
-        // 버튼 상태 반영
+        // ✅ 디버깅 로그 (보상 정보 확인)
+        Debug.Log($"🎯 Result: {isSuccess}, Multiplier = {multiplier}, Reward = {reward}, Bet = {betAmount}");
+
+        // ✅ 코인 증감 처리
+        if (isSuccess)
+            AddCoin(reward);
+        else
+            AddCoin(-betAmount);
+
+        // ✅ 버튼 상태 복원
         bool resultVisible = resultUIManager != null && resultUIManager.IsResultVisible();
         SetResultButtonState("READY", !resultVisible);
 
+        // ✅ 배팅 UI 다시 활성화
         if (betAmountUIManager != null)
             betAmountUIManager.SetInteractable(true);
 
+        // ✅ 보상 텍스트 숨김
         if (rewardText != null)
             rewardText.gameObject.SetActive(false);
-    }
 
+        // ✅ 이 시점에 선택 초기화 (선택 유지 필요했던 문제 해결)
+        ResetAllStartButtonColors();
+        selectedStartButton = null;
+        selectedStartIndex = -1;
+    }
     /// <summary>
     /// 모든 골 버튼을 활성화 또는 비활성화
     /// </summary>
