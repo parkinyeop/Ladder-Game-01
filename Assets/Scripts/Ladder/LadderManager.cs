@@ -4,6 +4,7 @@ using TMPro;
 using System.Collections.Generic;
 using System.Collections;
 using UnityEngine.EventSystems;
+using UnityEngine.Networking;
 
 /// <summary>
 /// LadderManager
@@ -1046,6 +1047,8 @@ public class LadderManager : MonoBehaviour
                 label.text = $"{multiplier:F1}X";
             }
         }
+
+        
     }
 
     public void SetCoin(float amount)
@@ -1062,19 +1065,96 @@ public class LadderManager : MonoBehaviour
             if (betAmountUIManager.GetBetAmount() > currentCoin)
                 betAmountUIManager.SetBetAmount(0f);
         }
+
+        // ✅ 서버에 현재 코인 잔액을 정확히 덮어쓰기
+        StartCoroutine(SetBalanceOnServer(currentCoin));
+    }
+
+    // ✅ 서버에 현재 코인 잔액을 그대로 덮어쓰는 요청
+    private IEnumerator SetBalanceOnServer(float balance)
+    {
+        string userId = "user001"; // 필요 시 외부에서 유저 ID 주입
+        string url = "http://localhost:3000/coin";
+
+        var requestData = new CoinSetRequest
+        {
+            user_id = userId,
+            balance = balance
+        };
+
+        string json = JsonUtility.ToJson(requestData);
+
+        UnityWebRequest request = new UnityWebRequest(url, "POST");
+        request.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        yield return request.SendWebRequest();
+
+        if (request.result != UnityWebRequest.Result.Success)
+        {
+            Debug.LogError($"❌ 코인 설정 실패: {request.error}");
+        }
+        else
+        {
+            Debug.Log($"✅ 서버에 코인 잔액 {balance} 설정 성공");
+        }
+    }
+
+    // 🔧 POST 요청용 구조체
+    [System.Serializable]
+    public class CoinSetRequest
+    {
+        public string user_id;
+        public float balance;
     }
 
     public void AddCoin(float amount)
     {
+        // 1. 코인 추가 또는 차감 (음수 가능)
         currentCoin = Mathf.Max(0f, currentCoin + amount);
+
+        // 2. 코인 텍스트 UI 업데이트
         UpdateCoinUI();
 
+        // 3. 배팅 UI 관련 상태 업데이트
         if (betAmountUIManager != null)
         {
+            // 퀵 배팅 버튼 활성/비활성 조정
             betAmountUIManager.UpdateQuickBetButtons(currentCoin);
 
+            // 현재 배팅 금액이 보유 코인을 초과하면 초기화
             if (betAmountUIManager.GetBetAmount() > currentCoin)
                 betAmountUIManager.SetBetAmount(0f);
+        }
+
+        // 🎯 서버에 코인 잔액 업데이트 요청
+        StartCoroutine(UpdateBalanceOnServer(amount));
+    }
+
+    private IEnumerator UpdateBalanceOnServer(float deltaAmount)
+    {
+        string userId = "user001"; // 유동적 처리 필요 시 외부에서 할당 가능
+        string url = $"http://localhost:3000/coin/{userId}";
+
+        // 서버에 보낼 데이터 포맷
+        var body = new AmountRequest { amount = deltaAmount };
+        string json = JsonUtility.ToJson(body);
+
+        UnityWebRequest request = new UnityWebRequest(url, "POST");
+        request.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        yield return request.SendWebRequest();
+
+        if (request.result != UnityWebRequest.Result.Success)
+        {
+            Debug.LogError($"❌ 서버에 코인 반영 실패: {request.error}");
+        }
+        else
+        {
+            Debug.Log($"✅ 서버에 코인 반영 성공: {deltaAmount} 적용됨");
         }
     }
 
