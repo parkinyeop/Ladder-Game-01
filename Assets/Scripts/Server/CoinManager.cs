@@ -133,5 +133,71 @@ public class CoinManager : MonoBehaviour
         }
     }
 
-    
-}
+          // 🟡 🔽 이 아래 위치에 추가하세요
+        public IEnumerator SendRewardRequest(
+            string user_id,
+            float betAmount,
+            float goalMultiplier,
+            float startMultiplier,
+            int verticalCount,
+            bool isSuccess
+        )
+        {
+            string url = "http://localhost:3000/api/reward";
+
+            RewardRequestData data = new RewardRequestData
+            {
+                user_id = user_id,
+                bet_amount = betAmount,
+                goal_multiplier = goalMultiplier,
+                start_multiplier = startMultiplier,
+                vertical_count = verticalCount,
+                is_success = isSuccess
+            };
+
+            string jsonBody = JsonUtility.ToJson(data);
+            UnityWebRequest request = new UnityWebRequest(url, "POST");
+            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonBody);
+            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
+
+            yield return request.SendWebRequest();
+
+            if (request.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogError($"❌ 보상 요청 실패: {request.error}");
+            }
+            else
+            {
+                string response = request.downloadHandler.text;
+                Debug.Log($"✅ 보상 응답: {response}");
+
+                RewardResponse reward = JsonUtility.FromJson<RewardResponse>(response);
+                playerBalance = reward.updated_balance;
+
+                if (balanceText != null)
+                    balanceText.text = $"Balance: {playerBalance:F1} Coins";
+            }
+        }
+
+        [System.Serializable]
+        public class RewardRequestData
+        {
+            public string user_id;
+            public float bet_amount;
+            public float goal_multiplier;
+            public float start_multiplier;
+            public int vertical_count;
+            public bool is_success;
+        }
+
+        [System.Serializable]
+        public class RewardResponse
+        {
+            public string user_id;
+            public float updated_balance;
+        }
+                
+    }
+
