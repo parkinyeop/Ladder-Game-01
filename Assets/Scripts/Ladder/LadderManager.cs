@@ -89,7 +89,7 @@ public class LadderManager : MonoBehaviour
     public float ladderWidth = 800f;
 
     // LadderManager.cs 변수 선언부에 추가
-    public GoalButtonRaycastTester goalRaycastTester;
+//    public GoalButtonRaycastTester goalRaycastTester;
 
     private void Start()
     {
@@ -242,8 +242,8 @@ public class LadderManager : MonoBehaviour
             resultUIManager.Hide();
 
         // LadderManager.cs (GenerateLadder 끝부분에 추가)
-        if (goalRaycastTester != null)
-            goalRaycastTester.RunTestAfterGeneration();
+        //if (goalRaycastTester != null)
+        //    goalRaycastTester.RunTestAfterGeneration();
     }
 
 
