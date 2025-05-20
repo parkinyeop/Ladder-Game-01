@@ -4,32 +4,31 @@
   <meta charset="utf-8" />
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <title>Ladder Game</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <style>
     html, body {
       margin: 0;
       padding: 0;
-      background: black;
       height: 100%;
-      width: 100%;
-      overflow: hidden;
+      background: black;
       display: flex;
       justify-content: center;
       align-items: center;
     }
 
     #unity-container {
-      width: 100%;
-      height: 100%;
+      width: 100vw;
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
+      background-color: black;
     }
 
-    canvas#unity-canvas {
+    #unity-canvas {
+      aspect-ratio: 9 / 16;
       width: auto;
       height: 100vh;
-      aspect-ratio: 9 / 16;
+      max-width: 100vw;
       background: black;
       display: block;
     }
@@ -61,6 +60,7 @@
     }
   </style>
 </head>
+
 <body>
   <div id="unity-container">
     <canvas id="unity-canvas" tabindex="-1"></canvas>
@@ -84,7 +84,9 @@
         : 'background: yellow; padding: 10px;';
       warningBanner.appendChild(div);
       if (type !== 'error') {
-        setTimeout(() => warningBanner.removeChild(div), 5000);
+        setTimeout(() => {
+          warningBanner.removeChild(div);
+        }, 5000);
       }
     }
 
@@ -100,34 +102,39 @@
       productName: "Ledder",
       productVersion: "1.0",
       showBanner: unityShowBanner,
-      matchWebGLToCanvasSize: false
+      matchWebGLToCanvasSize: false // 👉 캔버스 렌더 크기 수동 설정
     };
 
     const canvas = document.querySelector("#unity-canvas");
 
-    function resizeCanvasToMatchAspect() {
-      const targetAspect = 9 / 16;
-      const width = window.innerWidth;
-      const height = window.innerHeight;
+    // 🔧 디바이스에 맞는 해상도 조절 함수
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      const container = document.getElementById("unity-container");
 
-      let newWidth, newHeight;
-      if (width / height > targetAspect) {
-        newHeight = height;
-        newWidth = height * targetAspect;
+      const targetAspect = 9 / 16;
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+
+      let width, height;
+      if (containerWidth / containerHeight > targetAspect) {
+        height = containerHeight;
+        width = height * targetAspect;
       } else {
-        newWidth = width;
-        newHeight = width / targetAspect;
+        width = containerWidth;
+        height = width / targetAspect;
       }
 
-      canvas.width = newWidth * window.devicePixelRatio;
-      canvas.height = newHeight * window.devicePixelRatio;
-      canvas.style.width = `${newWidth}px`;
-      canvas.style.height = `${newHeight}px`;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
     }
 
-    window.addEventListener('resize', resizeCanvasToMatchAspect);
-    resizeCanvasToMatchAspect();
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas(); // 최초 호출
 
+    // 🎮 Unity 인스턴스 시작
     document.getElementById("unity-loading-bar").style.display = "block";
 
     const script = document.createElement("script");
@@ -141,6 +148,7 @@
         alert(message);
       });
     };
+
     document.body.appendChild(script);
   </script>
 </body>

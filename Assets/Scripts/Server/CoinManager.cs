@@ -76,8 +76,9 @@ public class CoinManager : MonoBehaviour
 
         if (request.result != UnityWebRequest.Result.Success)
         {
-            Debug.LogError($"❌ 서버 통신 실패: {request.error}");
+            Debug.LogError($"❌ 서버 통신 실패: Code {request.responseCode} - {request.error} - URL: {url}");
         }
+    
         else
         {
             string json = request.downloadHandler.text;

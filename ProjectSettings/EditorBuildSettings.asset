@@ -5,7 +5,11 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 2cda990e2423bbf4892e6590ba056729
+  - enabled: 1
+    path: Assets/Scenes/LadderMainScene.unity
+    guid: f824109c4ea4c40d0b66f659723aefde
   m_configObjects: {}
+  m_UseUCBPForAssetBundles: 0
