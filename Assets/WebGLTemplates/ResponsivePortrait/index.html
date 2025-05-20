@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ladder Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: black;
+      }
+      #unity-container {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      canvas {
+        width: auto;
+        height: 100vh;
+        aspect-ratio: 9 / 16;
+        background: black;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="unity-container">
+      <canvas id="unity-canvas"></canvas>
+    </div>
+    <script src="%UNITY_WEBGL_LOADER_URL%"></script>
+    <script>
+      createUnityInstance(document.querySelector("#unity-canvas"), {
+        dataUrl: "%UNITY_WEBGL_DATA_URL%",
+        frameworkUrl: "%UNITY_WEBGL_FRAMEWORK_URL%",
+        codeUrl: "%UNITY_WEBGL_CODE_URL%",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "%COMPANY_NAME%",
+        productName: "%PRODUCT_NAME%",
+        productVersion: "%PRODUCT_VERSION%",
+      });
+    </script>
+  </body>
+</html>
