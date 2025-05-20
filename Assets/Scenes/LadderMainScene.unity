@@ -389,6 +389,7 @@ MonoBehaviour:
   usernameInput: {fileID: 1937628726}
   passwordInput: {fileID: 2139739357}
   resultText: {fileID: 649896190}
+  loginPanel: {fileID: 56384932}
 --- !u!114 &56384935
 MonoBehaviour:
   m_ObjectHideFlags: 0

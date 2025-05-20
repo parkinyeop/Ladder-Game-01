@@ -46,7 +46,7 @@ public class CoinManager : MonoBehaviour
     private void Start()
     {
         // 최초 1회 조회
-        StartCoroutine(GetBalance());
+        //StartCoroutine(GetBalance());
 
         // 주기적 갱신 시작
         StartCoroutine(RefreshBalanceLoop());
@@ -61,6 +61,19 @@ public class CoinManager : MonoBehaviour
         {
             yield return new WaitForSeconds(refreshInterval);
             yield return StartCoroutine(GetBalance());
+        }
+    }
+
+    /// <summary>
+    /// 로그인 후 사용자 ID를 설정하고 최초 잔액을 조회
+    /// </summary>
+    public void SetUserId(string userId)
+    {
+        this.userId = userId;
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            StartCoroutine(GetBalance());
         }
     }
 

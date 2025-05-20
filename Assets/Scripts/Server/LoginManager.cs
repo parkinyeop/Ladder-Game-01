@@ -13,6 +13,9 @@ public class LoginManager : MonoBehaviour
     public TMP_InputField passwordInput;         // 비밀번호 입력창
     public TextMeshProUGUI resultText;           // 결과 메시지를 출력할 텍스트
 
+    [Header("🪟 로그인 패널")]
+    public GameObject loginPanel; // 로그인 UI 패널을 할당
+
     /// <summary>
     /// 로그인 버튼 클릭 시 호출됨
     /// </summary>
@@ -75,7 +78,16 @@ public class LoginManager : MonoBehaviour
             {
                 resultText.text = $"Login Success! Welcome, {response.user_id}";
                 // TODO: 로그인 성공 후 후속 처리 (예: 사용자 ID 저장, 화면 전환 등)
+                // ✅ 로그인 UI 패널 비활성화 (닫기)
+                if (loginPanel != null)
+                    loginPanel.SetActive(false);
+
+                // ✅ CoinManager에 로그인한 user_id 전달
+                CoinManager coinManager = FindObjectOfType<CoinManager>();
+                if (coinManager != null)
+                    coinManager.SetUserId(response.user_id);
             }
+        
             else
             {
                 resultText.text = "Invalid ID or password.";
