@@ -43,6 +43,7 @@ public class CoinManager : MonoBehaviour
         public float amount;
     }
 
+
     private void Start()
     {
         // 최초 1회 조회
@@ -51,6 +52,15 @@ public class CoinManager : MonoBehaviour
         // 주기적 갱신 시작
         StartCoroutine(RefreshBalanceLoop());
     }
+
+    private string jwtToken;
+
+    public void SetAuthToken(string token)
+    {
+        jwtToken = token;
+        Debug.Log("🟢 JWT 토큰 설정됨: " + jwtToken);
+    }
+
 
     /// <summary>
     /// 주기적으로 코인 잔액을 조회하는 루프
@@ -84,6 +94,10 @@ public class CoinManager : MonoBehaviour
     {
         string url = $"http://localhost:3000/coin/{userId}";
         UnityWebRequest request = UnityWebRequest.Get(url);
+
+        // 🔐 JWT 토큰 헤더 추가
+        if (!string.IsNullOrEmpty(jwtToken))
+            request.SetRequestHeader("Authorization", "Bearer " + jwtToken);
 
         yield return request.SendWebRequest();
 
@@ -128,6 +142,10 @@ public class CoinManager : MonoBehaviour
         request.downloadHandler = new DownloadHandlerBuffer();
         request.SetRequestHeader("Content-Type", "application/json");
 
+        // ✅ JWT 토큰 헤더 추가
+        if (!string.IsNullOrEmpty(jwtToken))
+            request.SetRequestHeader("Authorization", "Bearer " + jwtToken);
+
         yield return request.SendWebRequest();
 
         if (request.result != UnityWebRequest.Result.Success)
@@ -147,55 +165,64 @@ public class CoinManager : MonoBehaviour
         }
     }
 
-          // 🟡 🔽 이 아래 위치에 추가하세요
-        public IEnumerator SendRewardRequest(
-            string user_id,
-            float betAmount,
-            float goalMultiplier,
-            float startMultiplier,
-            int verticalCount,
-            bool isSuccess
-        )
+    // 🟡 🔽 이 아래 위치에 추가하세요
+    public IEnumerator SendRewardRequest(
+        string user_id,
+        float betAmount,
+        float goalMultiplier,
+        float startMultiplier,
+        int verticalCount,
+        bool isSuccess
+    )
+    {
+        string url = "http://localhost:3000/api/reward";
+
+        // ✅ JSON 데이터 준비
+        RewardRequestData data = new RewardRequestData
         {
-            string url = "http://localhost:3000/api/reward";
+            user_id = user_id,
+            bet_amount = betAmount,
+            goal_multiplier = goalMultiplier,
+            start_multiplier = startMultiplier,
+            vertical_count = verticalCount,
+            is_success = isSuccess
+        };
 
-            RewardRequestData data = new RewardRequestData
-            {
-                user_id = user_id,
-                bet_amount = betAmount,
-                goal_multiplier = goalMultiplier,
-                start_multiplier = startMultiplier,
-                vertical_count = verticalCount,
-                is_success = isSuccess
-            };
+        string jsonBody = JsonUtility.ToJson(data);
 
-            string jsonBody = JsonUtility.ToJson(data);
-            UnityWebRequest request = new UnityWebRequest(url, "POST");
-            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonBody);
-            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            request.downloadHandler = new DownloadHandlerBuffer();
-            request.SetRequestHeader("Content-Type", "application/json");
+        // ✅ 요청 구성
+        UnityWebRequest request = new UnityWebRequest(url, "POST");
+        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonBody);
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = new DownloadHandlerBuffer();
 
-            yield return request.SendWebRequest();
+        request.SetRequestHeader("Content-Type", "application/json");
 
-            if (request.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogError($"❌ 보상 요청 실패: {request.error}");
-            }
-            else
-            {
-                string response = request.downloadHandler.text;
-                Debug.Log($"✅ 보상 응답: {response}");
+        // ✅ JWT 토큰 인증 헤더 추가
+        if (!string.IsNullOrEmpty(jwtToken))
+            request.SetRequestHeader("Authorization", "Bearer " + jwtToken);
 
-                RewardResponse reward = JsonUtility.FromJson<RewardResponse>(response);
-                playerBalance = reward.updated_balance;
+        // ✅ 요청 전송
+        yield return request.SendWebRequest();
 
-                if (balanceText != null)
-                    balanceText.text = $"Balance: {playerBalance:F1} Coins";
-            }
+        // ✅ 응답 처리
+        if (request.result != UnityWebRequest.Result.Success)
+        {
+            Debug.LogError($"❌ 보상 요청 실패: {request.responseCode} - {request.error}");
         }
+        else
+        {
+            string response = request.downloadHandler.text;
+            Debug.Log($"✅ 보상 응답: {response}");
 
-        [System.Serializable]
+            RewardResponse reward = JsonUtility.FromJson<RewardResponse>(response);
+            playerBalance = reward.updated_balance;
+
+            if (balanceText != null)
+                balanceText.text = $"Balance: {playerBalance:F1} Coins";
+        }
+    }
+    [System.Serializable]
         public class RewardRequestData
         {
             public string user_id;
