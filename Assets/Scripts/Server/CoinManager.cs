@@ -37,12 +37,13 @@ public class CoinManager : MonoBehaviour
     [Header("⏱️ 갱신 주기 (초)")]
     public float refreshInterval = 5f; // 5초마다 갱신
 
+    public TextMeshProUGUI rewardText;
+
     [System.Serializable]
     public class AmountRequest
     {
         public float amount;
     }
-
 
     private void Start()
     {
@@ -165,22 +166,28 @@ public class CoinManager : MonoBehaviour
         }
     }
 
-    // 🟡 🔽 이 아래 위치에 추가하세요
+    /// <summary>
+    /// 게임 결과에 따른 보상 요청을 서버에 전송하는 코루틴
+    /// </summary>
+    /// <param name="betAmount">배팅 금액</param>
+    /// <param name="goalMultiplier">골 계수</param>
+    /// <param name="startMultiplier">스타트 계수</param>
+    /// <param name="verticalCount">세로줄 수</param>
+    /// <param name="isSuccess">성공 여부</param>
     public IEnumerator SendRewardRequest(
-        string user_id,
-        float betAmount,
-        float goalMultiplier,
-        float startMultiplier,
-        int verticalCount,
-        bool isSuccess
-    )
+    float betAmount,
+    float goalMultiplier,
+    float startMultiplier,
+    int verticalCount,
+    bool isSuccess
+)
     {
         string url = "http://localhost:3000/api/reward";
 
         // ✅ JSON 데이터 준비
         RewardRequestData data = new RewardRequestData
         {
-            user_id = user_id,
+            user_id = userId,  // userId는 내부 필드에서 자동 사용
             bet_amount = betAmount,
             goal_multiplier = goalMultiplier,
             start_multiplier = startMultiplier,
@@ -189,39 +196,69 @@ public class CoinManager : MonoBehaviour
         };
 
         string jsonBody = JsonUtility.ToJson(data);
+        int retryCount = 0;
+        const int maxRetries = 3;
 
-        // ✅ 요청 구성
-        UnityWebRequest request = new UnityWebRequest(url, "POST");
-        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonBody);
-        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-        request.downloadHandler = new DownloadHandlerBuffer();
-
-        request.SetRequestHeader("Content-Type", "application/json");
-
-        // ✅ JWT 토큰 인증 헤더 추가
-        if (!string.IsNullOrEmpty(jwtToken))
-            request.SetRequestHeader("Authorization", "Bearer " + jwtToken);
-
-        // ✅ 요청 전송
-        yield return request.SendWebRequest();
-
-        // ✅ 응답 처리
-        if (request.result != UnityWebRequest.Result.Success)
+        while (retryCount < maxRetries)
         {
-            Debug.LogError($"❌ 보상 요청 실패: {request.responseCode} - {request.error}");
-        }
-        else
-        {
-            string response = request.downloadHandler.text;
-            Debug.Log($"✅ 보상 응답: {response}");
+            UnityWebRequest request = new UnityWebRequest(url, "POST");
+            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonBody);
+            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
 
-            RewardResponse reward = JsonUtility.FromJson<RewardResponse>(response);
-            playerBalance = reward.updated_balance;
+            if (!string.IsNullOrEmpty(jwtToken))
+                request.SetRequestHeader("Authorization", "Bearer " + jwtToken);
 
-            if (balanceText != null)
-                balanceText.text = $"Balance: {playerBalance:F1} Coins";
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                string response = request.downloadHandler.text;
+                Debug.Log($"✅ 보상 응답: {response}");
+
+                RewardResponse reward = JsonUtility.FromJson<RewardResponse>(response);
+                playerBalance = reward.updated_balance;
+
+                if (balanceText != null)
+                    balanceText.text = $"Balance: {playerBalance:F1} Coins";
+
+                if (rewardText != null)
+                {
+                    rewardText.text = $"🎉 보상 성공! +{betAmount * goalMultiplier * startMultiplier:F1}";
+                    rewardText.color = Color.white;
+                    rewardText.gameObject.SetActive(true);
+                }
+
+                yield break; // ✅ 성공했으므로 종료
+            }
+            else
+            {
+                retryCount++;
+                Debug.LogWarning($"⚠️ 보상 요청 실패 시도 {retryCount}: {request.error}");
+
+                if (retryCount >= maxRetries)
+                {
+                    Debug.LogError($"❌ 보상 요청 최종 실패: {request.responseCode} - {request.error}");
+
+                    if (rewardText != null)
+                    {
+                        rewardText.text = $"A connection issue occurred with the server. Please try again shortly.";
+                        rewardText.color = Color.red;
+                        rewardText.gameObject.SetActive(true);
+                    }
+
+                    yield break;
+                }
+                else
+                {
+                    // ✅ 재시도 전 대기 시간 (점진 증가)
+                    yield return new WaitForSeconds(1.5f * retryCount);
+                }
+            }
         }
     }
+
     [System.Serializable]
         public class RewardRequestData
         {

@@ -369,39 +369,28 @@ public class LadderManager : MonoBehaviour
     /// </summary>
     private void CheckResult(int arrivedIndex)
     {
-        // 🎯 목표 위치 인덱스를 가져옴
         int goalIndex = generator.GetSelectedDestination();
-
-        // 💰 현재 배팅 금액을 가져옴
         float betAmount = betAmountUIManager != null ? betAmountUIManager.GetBetAmount() : 0f;
 
-        // ✅ 도착 위치가 목표 위치와 일치하는지 여부
         bool isSuccess = arrivedIndex == goalIndex;
+        float reward = 0f;
+        float multiplier = 0f;
 
-        float reward = 0f;     // 최종 보상금
-        float multiplier = 0f; // 배율 값
-
-        // ✅ 성공한 경우에만 보상을 계산
         if (isSuccess)
         {
             if (selectedStartIndex >= 0)
             {
-                // ⭐ 스타트 버튼을 수동으로 선택한 경우
-                // 보상 = 골 계수 × 스타트 계수 × (세로줄 수)^2
                 multiplier = goalMultiplierFactor * startMultiplierFactor * (verticalCount * verticalCount);
             }
             else
             {
-                // ⭐ 스타트 버튼을 선택하지 않은 경우 (랜덤 선택)
-                // 보상 = 골 계수 × 세로줄 수
                 multiplier = goalMultiplierFactor * verticalCount;
             }
 
-            // 💰 최종 보상 계산
             reward = betAmount * multiplier;
         }
 
-        // 📢 결과 메시지를 결과 패널에 표시
+        // ✅ 결과 메시지 UI
         if (resultUIManager != null)
         {
             string message = isSuccess
@@ -411,39 +400,34 @@ public class LadderManager : MonoBehaviour
             resultUIManager.ShowResult(message);
         }
 
-        // 🪵 디버깅 로그 출력
-        Debug.Log($"🎯 Result: {(isSuccess ? "Success" : "Fail")}, Multiplier = {multiplier}, Reward = {reward}, Bet = {betAmount}");
-
-        // 💸 서버에 보상 반영 (양수면 보상, 음수면 손실)
-        float finalAmount = isSuccess ? reward : -betAmount;
-
-        // 🛰️ CoinManager를 통해 서버에 코인 증감 요청
+        // ✅ 서버에 보상 요청
+        CoinManager coinManager = FindObjectOfType<CoinManager>();
         if (coinManager != null)
         {
-            coinManager.ModifyBalance(finalAmount);
-        }
-        else
-        {
-            Debug.LogWarning("⚠️ CoinManager가 연결되어 있지 않습니다. 서버 보상 반영이 불가능합니다.");
+            StartCoroutine(coinManager.SendRewardRequest(
+                betAmount,
+                goalMultiplierFactor,
+                selectedStartIndex >= 0 ? startMultiplierFactor : 1f,
+                verticalCount,
+                isSuccess
+            ));
         }
 
-        // 🔄 결과 버튼 상태 복원
+        // ✅ 버튼 및 UI 초기화
         bool resultVisible = resultUIManager != null && resultUIManager.IsResultVisible();
         SetResultButtonState("READY", !resultVisible);
 
-        // 🔓 배팅 UI 다시 활성화
         if (betAmountUIManager != null)
             betAmountUIManager.SetInteractable(true);
 
-        // 👁️ 보상 텍스트 숨김 처리
         if (rewardText != null)
             rewardText.gameObject.SetActive(false);
 
-        // 🧼 스타트 버튼 초기화
         ResetAllStartButtonColors();
         selectedStartButton = null;
         selectedStartIndex = -1;
     }
+
     /// <summary>
     /// 모든 골 버튼을 활성화 또는 비활성화
     /// </summary>
