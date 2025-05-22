@@ -91,34 +91,43 @@ public class CoinManager : MonoBehaviour
     /// <summary>
     /// 서버에서 잔액 조회
     /// </summary>
-    private IEnumerator GetBalance()
+    public IEnumerator GetBalance()
     {
-        string url = $"http://localhost:3000/coin/{userId}";
+        // ✅ JWT 토큰 유효성 체크 (null 또는 빈 문자열이면 실행하지 않음)
+        if (string.IsNullOrEmpty(jwtToken))
+        {
+            Debug.LogWarning("⚠ GetBalance 호출 시 토큰이 null이거나 비어 있음 → 요청 취소");
+            yield break;
+        }
+
+        // ✅ 서버 주소 (가능하면 127.0.0.1 사용 권장, 특히 WebGL에서)
+        string url = $"http://127.0.0.1:3000/coin/{userId}";
         UnityWebRequest request = UnityWebRequest.Get(url);
 
-        // 🔐 JWT 토큰 헤더 추가
-        if (!string.IsNullOrEmpty(jwtToken))
-            request.SetRequestHeader("Authorization", "Bearer " + jwtToken);
+        // 🔐 JWT 인증 헤더 추가
+        request.SetRequestHeader("Authorization", "Bearer " + jwtToken);
 
+        // ✅ 요청 전송
         yield return request.SendWebRequest();
 
+        // ✅ 실패 처리
         if (request.result != UnityWebRequest.Result.Success)
         {
             Debug.LogError($"❌ 서버 통신 실패: Code {request.responseCode} - {request.error} - URL: {url}");
+            Debug.Log($"🔴 응답 본문: {request.downloadHandler.text}");
+            yield break;
         }
-    
-        else
-        {
-            string json = request.downloadHandler.text;
-            Debug.Log($"✅ 서버 응답: {json}");
 
-            CoinBalanceResponse data = JsonUtility.FromJson<CoinBalanceResponse>(json);
-            playerBalance = data.balance;
+        // ✅ 성공 처리
+        string json = request.downloadHandler.text;
+        Debug.Log($"✅ 서버 응답: {json}");
 
-            // ✅ UI 텍스트 갱신
-            if (balanceText != null)
-                balanceText.text = $"Balance: {playerBalance:F1} Coins";
-        }
+        CoinBalanceResponse data = JsonUtility.FromJson<CoinBalanceResponse>(json);
+        playerBalance = data.balance;
+
+        // ✅ UI 텍스트 갱신
+        if (balanceText != null)
+            balanceText.text = $"Balance: {playerBalance:F1} Coins";
     }
 
     /// <summary>
@@ -257,6 +266,11 @@ public class CoinManager : MonoBehaviour
                 }
             }
         }
+    }
+
+    public void StartBalanceRequest()
+    {
+        StartCoroutine(GetBalance()); // ✅ CoinManager는 항상 활성 상태일 것으로 가정
     }
 
     [System.Serializable]

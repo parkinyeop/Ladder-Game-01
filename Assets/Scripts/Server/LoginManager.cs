@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using TMPro;
 using System.Collections;
+using System.Text;
 
 /// <summary>
 /// Unity에서 사용자 로그인을 처리하는 클래스
@@ -16,6 +17,8 @@ public class LoginManager : MonoBehaviour
 
     [Header("🪟 로그인 UI 패널")]
     public GameObject loginPanel;                // 로그인 UI 전체 패널 (성공 시 비활성화)
+
+    private string currentJwtToken;
 
     /// <summary>
     /// 로그인 버튼 클릭 시 호출
@@ -34,6 +37,34 @@ public class LoginManager : MonoBehaviour
 
         // ✅ 로그인 요청 코루틴 시작
         StartCoroutine(SendLoginRequest(userId, password));
+    }
+
+    /// <summary>
+    /// 로그인 성공 후 JWT 토큰을 저장하는 메서드
+    /// </summary>
+    public void SetJwtToken(string token)
+    {
+        currentJwtToken = token;
+        Debug.Log("✅ JWT 토큰 저장됨: " + token);
+    }
+
+
+    void OnLoginSuccess(string token)
+    {
+        Debug.Log("✅ 로그인 성공, JWT 토큰 수신: " + token);
+
+        // LadderManager 찾기
+        LadderManager ladderManager = FindObjectOfType<LadderManager>();
+        if (ladderManager != null)
+        {
+            ladderManager.SetJwtToken(token); // ✅ 토큰 전달
+        }
+        else
+        {
+            Debug.LogWarning("⚠ LadderManager를 찾을 수 없습니다. 토큰 전달 실패");
+        }
+
+        // 이후 UI 닫기, 로그인 패널 숨기기 등 처리
     }
 
     /// <summary>
@@ -65,9 +96,9 @@ public class LoginManager : MonoBehaviour
     /// </summary>
     private IEnumerator SendLoginRequest(string userId, string password)
     {
-        string url = "http://localhost:3000/auth/login";
+        string url = "http://127.0.0.1:3000/auth/login"; // ✅ localhost 대신 127.0.0.1
 
-        // ✅ JSON 요청 데이터 구성
+        // ✅ JSON 요청 본문 구성
         LoginRequest loginData = new LoginRequest
         {
             user_id = userId,
@@ -78,7 +109,7 @@ public class LoginManager : MonoBehaviour
 
         // ✅ UnityWebRequest 구성
         UnityWebRequest request = new UnityWebRequest(url, "POST");
-        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(jsonBody);
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
         request.downloadHandler = new DownloadHandlerBuffer();
         request.SetRequestHeader("Content-Type", "application/json");
@@ -88,39 +119,56 @@ public class LoginManager : MonoBehaviour
         // ✅ 요청 전송
         yield return request.SendWebRequest();
 
+        // ✅ 실패 처리
         if (request.result != UnityWebRequest.Result.Success)
         {
             Debug.LogError("❌ 로그인 요청 실패: " + request.error);
+            Debug.Log($"🔴 응답 코드: {request.responseCode}");
+            Debug.Log($"🔴 응답 본문: {request.downloadHandler.text}");
             resultText.text = "Login Failed";
+            yield break;
+        }
+
+        // ✅ 성공 응답 처리
+        string responseJson = request.downloadHandler.text;
+        Debug.Log("✅ 로그인 성공 응답 수신: " + responseJson);
+
+        LoginResponse response = JsonUtility.FromJson<LoginResponse>(responseJson);
+        Debug.Log($"🧾 받은 토큰: {response.token}");
+
+        if (response.success)
+        {
+            resultText.text = $"Login Success! Welcome, {response.user_id}";
+
+            // ✅ 로그인 패널 비활성화
+            if (loginPanel != null)
+                loginPanel.SetActive(false);
+
+            // ✅ CoinManager 처리
+            CoinManager coinManager = FindObjectOfType<CoinManager>();
+            if (coinManager != null)
+            {
+                coinManager.SetUserId(response.user_id);
+                coinManager.SetAuthToken(response.token); // ✅ 반드시 토큰 먼저
+
+                // ✅ 코루틴도 CoinManager가 실행하도록 위임
+                coinManager.StartBalanceRequest(); // 아래 정의 참고
+                //StartCoroutine(coinManager.GetBalance()); // ✅ 토큰 설정 후 호출
+            }
+
+            // ✅ LadderManager 토큰 전달
+            LadderManager ladderManager = FindObjectOfType<LadderManager>();
+            if (ladderManager != null)
+            {
+                ladderManager.SetJwtToken(response.token);
+            }
+
+            // ✅ 추가 처리: 게임 시작 UI로 전환 등
+            // OnLoginSuccess(response.token); // 원한다면 콜백 방식으로 분리 가능
         }
         else
         {
-            string responseJson = request.downloadHandler.text;
-            Debug.Log("✅ 로그인 성공 응답 수신: " + responseJson);
-
-            // ✅ 서버 응답 파싱
-            LoginResponse response = JsonUtility.FromJson<LoginResponse>(responseJson);
-            Debug.Log($"🧾 받은 토큰: {response.token}");
-
-            if (response.success)
-            {
-                resultText.text = $"Login Success! Welcome, {response.user_id}";
-
-                // ✅ 로그인 성공 후 로그인 패널 비활성화
-                if (loginPanel != null)
-                    loginPanel.SetActive(false);
-
-                // ✅ CoinManager에 user_id 전달
-                CoinManager coinManager = FindObjectOfType<CoinManager>();
-                if (coinManager != null)
-                    coinManager.SetUserId(response.user_id);
-                    coinManager.SetAuthToken(response.token); // ✅ 토큰 전달
-                // TODO: JWT 토큰 저장 및 이후 인증 헤더 적용 (추가 예정)
-            }
-            else
-            {
-                resultText.text = "Invalid ID or password.";
-            }
+            resultText.text = "Invalid ID or password.";
         }
     }
 

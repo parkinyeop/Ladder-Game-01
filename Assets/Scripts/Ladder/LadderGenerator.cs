@@ -257,13 +257,21 @@ public class LadderGenerator : MonoBehaviour
     /// 2. 추가로 horizontalLineCount를 만족할 때까지 무작위로 생성 (겹침 방지 포함)
     /// 3. y값은 중복되지 않도록 처리
     /// </summary>
+    /// <summary>
+    /// 사다리의 가로줄을 설정하는 함수 (최소 보장 + 랜덤 추가)
+    /// </summary>
     public void SetupHorizontalLines(int verticalCount, int stepCount, int horizontalLineCount, bool randomize)
     {
-        ladderMap = new bool[stepCount, verticalCount - 1]; // [층 수, 세로쌍 수]
-        HashSet<int> usedY = new HashSet<int>();             // 중복된 y 방지
-        HashSet<(int y, int x)> usedPairs = new HashSet<(int y, int x)>(); // (y,x) 중복 방지
+        // ✅ 가로줄 연결 상태를 저장할 맵 초기화: [y, x] = x세로줄과 x+1세로줄 사이 연결 여부
+        ladderMap = new bool[stepCount, verticalCount - 1];
 
-        // 1. x(세로쌍)별로 최소 하나 보장
+        // ✅ 중복 방지를 위한 Set 구조
+        HashSet<int> usedY = new HashSet<int>();                       // 같은 y에 중복 생성 방지
+        HashSet<(int y, int x)> usedPairs = new HashSet<(int, int)>(); // 같은 (y,x)쌍 중복 방지
+
+        Debug.Log($"\uD83D\uDCE6 SetupHorizontalLines 시작: v={verticalCount}, s={stepCount}");
+
+        // ✅ 1. 각 x쌍마다 최소 하나의 가로줄 보장
         for (int x = 0; x < verticalCount - 1; x++)
         {
             bool placed = false;
@@ -273,15 +281,16 @@ public class LadderGenerator : MonoBehaviour
             {
                 int y = Random.Range(0, stepCount);
 
+                // 중복 체크
                 if (usedPairs.Contains((y, x)) || usedY.Contains(y))
                     continue;
 
                 if (CanPlaceHorizontalLine(y, x, verticalCount))
                 {
-                    ladderMap[y, x] = true;
-                    usedPairs.Add((y, x));
+                    ladderMap[y, x] = true;                  // ✅ 가로줄 표시
+                    usedPairs.Add((y, x));                   // 사용 기록
                     usedY.Add(y);
-                    CreateHorizontalLine(y, x);
+                    CreateHorizontalLine(y, x);              // 실제 프리팹 생성
                     placed = true;
                 }
             }
@@ -290,7 +299,7 @@ public class LadderGenerator : MonoBehaviour
                 Debug.LogWarning($"⚠️ x={x} 위치에 가로줄 보장 실패");
         }
 
-        // 2. 추가 줄 생성 (총합이 horizontalLineCount가 되도록)
+        // ✅ 2. 추가 가로줄 랜덤 생성 (전체 개수 만족하도록)
         int guaranteed = verticalCount - 1;
         int additional = Mathf.Max(0, horizontalLineCount - guaranteed);
 
@@ -319,7 +328,7 @@ public class LadderGenerator : MonoBehaviour
         if (created < additional)
             Debug.LogWarning($"⚠️ 추가 가로줄 부족: {created}/{additional}");
 
-        // 최종 디버그 출력
+        // ✅ 최종 디버그 출력 (ladderMap 상태 확인)
         for (int y = 0; y < stepCount; y++)
         {
             string row = $"[ladderMap] y={y} : ";
@@ -561,6 +570,7 @@ public class LadderGenerator : MonoBehaviour
             Debug.LogError("🚨 destinationButtonPrefab이 연결되지 않았습니다.");
 
         manager.InitializeDestinationButtons(verticalCount);
+
     }
 
     /// <summary>
@@ -610,5 +620,13 @@ public class LadderGenerator : MonoBehaviour
             if (label != null)
                 label.text = (i + 1).ToString();
         }
+    }
+
+    /// <summary>
+    /// 현재 사다리의 가로줄 존재 정보를 외부로 반환합니다.
+    /// </summary>
+    public bool[,] GetLadderMap()
+    {
+        return ladderMap;
     }
 }

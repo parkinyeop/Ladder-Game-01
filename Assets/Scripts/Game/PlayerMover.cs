@@ -32,6 +32,11 @@ public class PlayerMover
         this.playerTransform = player;
         this.startIndex = startIndex;
         this.moveSpeed = speed;
+
+        // ✅ 디버깅: ladderMap 상태 출력
+        var ladderMap = ladderManager.ladderGenerator.GetLadderMap();
+        LadderDebugHelper.LogLadderMapReference(ladderMap, "PlayerMover.Setup");
+        LadderDebugHelper.LogLadderMap(ladderMap, "PlayerMover.Setup");
     }
 
     /// <summary>
@@ -60,76 +65,63 @@ public class PlayerMover
     /// </summary>
     private IEnumerator MoveAlongLadder()
     {
-        // 1. 이동 중 상태 설정
         isMoving = true;
 
-        // 2. 현재 세로줄 인덱스
         int currentX = startIndex;
-
-        // 3. 사다리 전체 정보
         int stepCount = ladderManager.stepCount;
         float stepHeight = ladderManager.stepHeight;
-
-        // 4. 플레이어 UI의 RectTransform 확보
         RectTransform rectTransform = playerTransform.GetComponent<RectTransform>();
+
         if (rectTransform == null)
         {
             Debug.LogError("[PlayerMover] RectTransform이 없습니다.");
             yield break;
         }
 
-        // 5. 시작 Y 위치 (최상단)
         float startY = LadderLayoutHelper.GetYPosition(0, stepCount, stepHeight);
 
-        // 6. 초기 위치 설정
+        // ▶ 처음 위치 설정 (시작 위치)
         rectTransform.anchoredPosition = new Vector2(
             LadderLayoutHelper.GetXPosition(currentX, ladderManager.ladderWidth, ladderManager.verticalCount),
             startY
         );
 
-        // 🔁 7. 각 층마다 아래로 이동하며 경로 탐색
+        // 🔁 각 Y 층마다 수직→가로줄 검사→수평 이동
         for (int y = 0; y < stepCount; y++)
         {
-            // 7-1. 현재 층의 Y 위치 계산
             float yPos = LadderLayoutHelper.GetYPosition(y, stepCount, stepHeight);
+            float xPos = LadderLayoutHelper.GetXPosition(currentX, ladderManager.ladderWidth, ladderManager.verticalCount);
 
-            // 수직 이동
-            yield return MoveTo(new Vector2(
-                LadderLayoutHelper.GetXPosition(currentX, ladderManager.ladderWidth, ladderManager.verticalCount),
-                yPos
-            ));
+            // ▶ 1. 수직 이동 먼저
+            yield return MoveTo(new Vector2(xPos, yPos));
 
-            // 정확한 좌우 이동 방향으로 수정
+            // ▶ 2. 수평 이동 판단 (오른쪽 먼저)
             if (currentX < ladderManager.verticalCount - 1 && ladderManager.HasHorizontalLine(y, currentX))
             {
-                // 현재 x 위치에서 오른쪽으로 가는 가로줄이 있는 경우
                 currentX++; // 오른쪽으로 이동
-                float xPos = LadderLayoutHelper.GetXPosition(currentX, ladderManager.ladderWidth, ladderManager.verticalCount);
-                yield return MoveTo(new Vector2(xPos, yPos));
+                float newX = LadderLayoutHelper.GetXPosition(currentX, ladderManager.ladderWidth, ladderManager.verticalCount);
+                yield return MoveTo(new Vector2(newX, yPos));
             }
             else if (currentX > 0 && ladderManager.HasHorizontalLine(y, currentX - 1))
             {
-                // 왼쪽(x-1)에서 현재 위치로 오는 가로줄이 있는 경우
                 currentX--; // 왼쪽으로 이동
-                float xPos = LadderLayoutHelper.GetXPosition(currentX, ladderManager.ladderWidth, ladderManager.verticalCount);
-                yield return MoveTo(new Vector2(xPos, yPos));
+                float newX = LadderLayoutHelper.GetXPosition(currentX, ladderManager.ladderWidth, ladderManager.verticalCount);
+                yield return MoveTo(new Vector2(newX, yPos));
             }
 
-            // 7-4. 현재 위치 출력 로그
-            Debug.Log($"▶ 위치 이동 완료: X={currentX}, Y={yPos}");
+            // (디버그용 로그)
+            // Debug.Log($"📍 위치: X={currentX}, Y={y}");
         }
 
-        // 8. 최종 바닥으로 한 칸 더 하강 (골 버튼 위치 보정)
+        // ▶ 마지막 바닥 위치로 한 칸 더 이동 (골 위치)
         float finalY = LadderLayoutHelper.GetYPosition(stepCount, stepCount, stepHeight);
-        yield return MoveTo(new Vector2(
-            LadderLayoutHelper.GetXPosition(currentX, ladderManager.ladderWidth, ladderManager.verticalCount),
-            finalY
-        ));
+        float finalX = LadderLayoutHelper.GetXPosition(currentX, ladderManager.ladderWidth, ladderManager.verticalCount);
+        yield return MoveTo(new Vector2(finalX, finalY));
 
-        // 9. 완료 처리
         isMoving = false;
         onFinishMove?.Invoke(currentX);
     }
+
     /// <summary>
     /// 주어진 목표 위치로 anchoredPosition 기준 부드럽게 이동
     /// </summary>
