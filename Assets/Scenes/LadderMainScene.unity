@@ -3915,6 +3915,7 @@ MonoBehaviour:
   playerBalance: 0
   balanceText: {fileID: 101251155}
   refreshInterval: 5
+  rewardText: {fileID: 247864926}
 --- !u!4 &1821041594
 Transform:
   m_ObjectHideFlags: 0
