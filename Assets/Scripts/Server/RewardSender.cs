@@ -53,6 +53,9 @@ public class RewardSender : MonoBehaviour
         // ✅ 4. 디버그용 JSON 출력
         Debug.Log("📤 전송 JSON:\n" + json);
 
+        // ✅ 🔍 디버그 출력 (서버 전송 전에 구조 확인)
+        Debug.Log("📤 서버 전송 데이터:\n" + json);
+
         // ✅ 5. 요청 생성 및 설정
         UnityWebRequest request = new UnityWebRequest(url, "POST");
         byte[] bodyRaw = Encoding.UTF8.GetBytes(json);

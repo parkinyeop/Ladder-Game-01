@@ -51,7 +51,7 @@ public class CoinManager : MonoBehaviour
         //StartCoroutine(GetBalance());
 
         // 주기적 갱신 시작
-        StartCoroutine(RefreshBalanceLoop());
+        //StartCoroutine(RefreshBalanceLoop());
     }
 
     private string jwtToken;
@@ -86,6 +86,17 @@ public class CoinManager : MonoBehaviour
         {
             StartCoroutine(GetBalance());
         }
+    }
+
+    public void SetUser(string user_id, string token)
+    {
+        this.userId = user_id;
+        this.jwtToken = token;
+
+        Debug.Log($"✅ SetUser(): userId={userId}, token={(string.IsNullOrEmpty(token) ? "❌없음" : "✅있음")}");
+
+        StopAllCoroutines();              // ✅ 기존 루프 중지
+        StartCoroutine(RefreshBalanceLoop()); // ✅ 안전하게 재시작
     }
 
     /// <summary>

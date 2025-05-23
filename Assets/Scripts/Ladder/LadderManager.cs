@@ -486,7 +486,7 @@ public class LadderManager : MonoBehaviour
         // ✅ UI 결과 패널 표시
         if (resultUIManager != null)
         {
-            string resultMsg = isSuccess ? "🎉 SUCCESS!" : "❌ FAIL";
+            string resultMsg = isSuccess ? "You Got it!" : "Opps !";
             string detailMsg = $"You reached {arrivedIndex}, goal was {goalIndex}\nReward: {rewardAmount:F1} Coins";
             resultUIManager.ShowResult(resultMsg + "\n" + detailMsg);
         }

@@ -137,36 +137,28 @@ public class LoginManager : MonoBehaviour
         Debug.Log($"🧾 받은 토큰: {response.token}");
 
         if (response.success)
-        {
-            resultText.text = $"Login Success! Welcome, {response.user_id}";
-
-            // ✅ 로그인 패널 비활성화
-            if (loginPanel != null)
-                loginPanel.SetActive(false);
-
-            // ✅ CoinManager 처리
-            CoinManager coinManager = FindObjectOfType<CoinManager>();
-            if (coinManager != null)
+            // ✅ 로그인 응답 수신 후
+            if (response.success)
             {
-                coinManager.SetUserId(response.user_id);
-                coinManager.SetAuthToken(response.token); // ✅ 반드시 토큰 먼저
+                resultText.text = $"Login Success! Welcome, {response.user_id}";
 
-                // ✅ 코루틴도 CoinManager가 실행하도록 위임
-                coinManager.StartBalanceRequest(); // 아래 정의 참고
-                //StartCoroutine(coinManager.GetBalance()); // ✅ 토큰 설정 후 호출
+                if (loginPanel != null)
+                    loginPanel.SetActive(false);
+
+                CoinManager coinManager = FindObjectOfType<CoinManager>();
+                if (coinManager != null)
+                {
+                    coinManager.SetUser(response.user_id, response.token); // ✅ 핵심 수정
+                    coinManager.StartBalanceRequest(); // 🔄 잔액 즉시 조회 추가
+                }
+
+                LadderManager ladderManager = FindObjectOfType<LadderManager>();
+                if (ladderManager != null)
+                {
+                    ladderManager.SetJwtToken(response.token);
+                }
             }
-
-            // ✅ LadderManager 토큰 전달
-            LadderManager ladderManager = FindObjectOfType<LadderManager>();
-            if (ladderManager != null)
-            {
-                ladderManager.SetJwtToken(response.token);
-            }
-
-            // ✅ 추가 처리: 게임 시작 UI로 전환 등
-            // OnLoginSuccess(response.token); // 원한다면 콜백 방식으로 분리 가능
-        }
-        else
+            else
         {
             resultText.text = "Invalid ID or password.";
         }
