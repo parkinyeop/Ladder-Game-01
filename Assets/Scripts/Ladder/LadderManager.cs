@@ -71,6 +71,8 @@ public class LadderManager : MonoBehaviour
     public GameObject startButtonPrefab;             // 출발 버튼 프리팹
     public Transform startButtonsParent;             // 출발 버튼들을 담을 부모 오브젝트
 
+    public LoadingUIManager loadingUIManager;
+
     [SerializeField] private TextMeshProUGUI resultButtonLabel;
 
     public BetAmountUIManager betAmountUIManager;
@@ -116,6 +118,17 @@ public class LadderManager : MonoBehaviour
     }
     private void Start()
     {
+        // 게임 시작 시 또는 사다리 리셋 시 호출
+        loadingUIManager.StartLoading();
+        if (loadingUIManager != null)
+        {
+            loadingUIManager.StartLoading();
+        }
+        else
+        {
+            Debug.LogError("❌ loadingUIManager가 할당되지 않았습니다. 인스펙터에서 확인하세요.");
+        }
+
         //generator = new LadderGenerator(this);
         playerMover = new PlayerMover(this);
 
