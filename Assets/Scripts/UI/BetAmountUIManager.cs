@@ -74,9 +74,6 @@ public class BetAmountUIManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 배팅 금액 설정 및 유효성 검사
-    /// </summary>
-    /// <summary>
     /// 배팅 금액을 설정하고 UI 동기화, 유효성 검사, 버튼 강조, 퀵배팅 취소까지 모두 처리
     /// </summary>
     public void SetBetAmount(float amount)
@@ -134,18 +131,24 @@ public class BetAmountUIManager : MonoBehaviour
         currentBetAmount = 0f;
 
         if (betSlider != null)
+        {
+            // 🔐 슬라이더 이벤트 잠시 제거
+            betSlider.onValueChanged.RemoveListener(SetBetAmount);
             betSlider.value = 0f;
+            betSlider.onValueChanged.AddListener(SetBetAmount);
+        }
 
         UpdateBetAmountText();
-
-        foreach (var btn in betButtons)
-            btn.GetComponent<Image>().color = defaultColor;
+        ResetButtonColors();
 
         if (ladderManager != null)
         {
             ladderManager.SetGoalButtonsInteractable(false);
-            ladderManager.resultButton.interactable = (betAmount > 0f);
+            ladderManager.resultButton.interactable = false;
         }
+
+        // ✅ 외부에 확정 취소 알림
+        OnBetConfirmed?.Invoke(0f);
     }
 
     private void UpdateButtonColors(float activeAmount)
@@ -262,12 +265,32 @@ public class BetAmountUIManager : MonoBehaviour
         OnBetConfirmed?.Invoke(currentBetAmount);
     }
 
+    /// <summary>
+    /// 보유 코인에 따라 퀵 배팅 버튼의 활성 상태를 갱신
+    /// </summary>
     public void UpdateQuickBetButtons(float currentCoin)
     {
         foreach (var btn in betButtons)
         {
-            float value = GetButtonValue(btn);
-            btn.interactable = value <= currentCoin;
+            if (btn == null) continue;
+
+            float value = GetButtonValue(btn); // 1, 5, 10, 50, 100 등
+            bool isAffordable = (value <= currentCoin);
+
+            btn.interactable = isAffordable;
+
+            // ✅ 색상 적용
+            if (btn.targetGraphic != null)
+            {
+                btn.targetGraphic.color = isAffordable ? Color.white : new Color(0.5f, 0.5f, 0.5f, 1f);
+            }
+
+            // ✅ 텍스트 색상도 조정
+            TMP_Text label = btn.GetComponentInChildren<TMP_Text>();
+            if (label != null)
+            {
+                label.color = isAffordable ? Color.black : new Color(0.6f, 0.6f, 0.6f, 1f);
+            }
         }
     }
 
@@ -279,12 +302,6 @@ public class BetAmountUIManager : MonoBehaviour
         if (betSlider != null)
             betSlider.interactable = isInteractable;
 
-        foreach (var btn in betButtons)
-        {
-            if (btn != null)
-                btn.interactable = isInteractable;
-        }
-
-        Debug.Log($"🟢 SetInteractable({isInteractable}) 호출됨");
+        Debug.Log($"🟢 SetInteractable({isInteractable}) - 버튼은 항상 활성화");
     }
 }
